@@ -54,7 +54,7 @@ public class CachingWebMapService implements MethodInterceptor {
 
     private static final Logger LOGGER = Logging.getLogger(CachingWebMapService.class);
 
-    private GWC gwc;
+    private final GWC gwc;
 
     public CachingWebMapService(GWC gwc) {
         this.gwc = gwc;
@@ -73,8 +73,9 @@ public class CachingWebMapService implements MethodInterceptor {
         }
 
         final GetMapRequest request = getRequest(invocation);
+        boolean fullWMS = request.getRawKvp().containsKey("GWC.FULLWMS");
         boolean tiled = request.isTiled();
-        if (!tiled) {
+        if (!tiled && !fullWMS) {
             return (WebMap) invocation.proceed();
         }
 
@@ -173,18 +174,20 @@ public class CachingWebMapService implements MethodInterceptor {
     }
 
     private void setCacheMetadataHeaders(RawMap map, ConveyorTile cachedTile, TileLayer layer) {
-        long[] tileIndex = cachedTile.getTileIndex();
-        CacheResult cacheResult = cachedTile.getCacheResult();
-        GridSubset gridSubset = layer.getGridSubset(cachedTile.getGridSetId());
-        BoundingBox tileBounds = gridSubset.boundsFromIndex(tileIndex);
-
-        String cacheResultHeader = cacheResult == null ? "UNKNOWN" : cacheResult.toString();
         map.setResponseHeader("geowebcache-layer", layer.getName());
-        map.setResponseHeader("geowebcache-cache-result", cacheResultHeader);
-        map.setResponseHeader("geowebcache-tile-index", Arrays.toString(tileIndex));
-        map.setResponseHeader("geowebcache-tile-bounds", tileBounds.toString());
-        map.setResponseHeader("geowebcache-gridset", gridSubset.getName());
-        map.setResponseHeader("geowebcache-crs", gridSubset.getSRS().toString());
+        if (! "getmap".equals(cachedTile.getHint())) {
+            long[] tileIndex = cachedTile.getTileIndex();
+            CacheResult cacheResult = cachedTile.getCacheResult();
+            GridSubset gridSubset = layer.getGridSubset(cachedTile.getGridSetId());
+            BoundingBox tileBounds = gridSubset.boundsFromIndex(tileIndex);
+
+            String cacheResultHeader = cacheResult == null ? "UNKNOWN" : cacheResult.toString();
+            map.setResponseHeader("geowebcache-cache-result", cacheResultHeader);
+            map.setResponseHeader("geowebcache-tile-index", Arrays.toString(tileIndex));
+            map.setResponseHeader("geowebcache-tile-bounds", tileBounds.toString());
+            map.setResponseHeader("geowebcache-gridset", gridSubset.getName());
+            map.setResponseHeader("geowebcache-crs", gridSubset.getSRS().toString());
+        }
     }
 
     private Object getCacheAge(TileLayer layer) {

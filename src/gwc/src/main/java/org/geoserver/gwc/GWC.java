@@ -118,6 +118,7 @@ import com.vividsolutions.jts.densify.Densifier;
 import com.vividsolutions.jts.geom.Envelope;
 import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.geom.Polygon;
+import org.geowebcache.service.wms.WMSService;
 
 /**
  * Spring bean acting as a mediator between GWC and GeoServer for the GWC integration classes so
@@ -621,10 +622,21 @@ public class GWC implements DisposableBean, InitializingBean, ApplicationContext
         if (null == tileReq) {
             return null;
         }
+        if ("getmap".equals(tileReq.getHint())) {
+            try {
+                GeoWebCacheExtensions.extensions(WMSService.class).get(0).handleRequest(tileReq);
+            } catch (GeoWebCacheException ex) {
+                ex.printStackTrace();
+            }
+            tileReq.setTileLayer(tileLayer);
+            tileReq.getStorageObject().setBlob(new ByteArrayResource( ((FakeHttpServletResponse)tileReq.servletResp).getBytes()));
+            return tileReq;
+        }
         ConveyorTile tileResp = null;
         try {
             tileResp = tileLayer.getTile(tileReq);
         } catch (Exception e) {
+            e.printStackTrace();
             log.log(Level.INFO, "Error dispatching tile request to GeoServer", e);
         }
         return tileResp;
@@ -681,6 +693,22 @@ public class GWC implements DisposableBean, InitializingBean, ApplicationContext
                 gridSubset = findBestMatchingGrid(tileBounds, crsMatchingGridSubsets, reqW, reqH,
                         matchingTileIndex);
                 if (gridSubset == null) {
+                    //@todo check fullWMS enabled
+
+                    // @todo better way of making layers string?
+                    String layers = request.getLayers().get(0).getName();
+                    FakeHttpServletRequest req = new FakeHttpServletRequest(request.getRawKvp(), new Cookie[0]);
+                    FakeHttpServletResponse resp = new FakeHttpServletResponse();
+                    ConveyorTile fullWMSTile = WMSService.fullWMSTile(matchingTileIndex,
+                            crsMatchingGridSubsets.get(0), tileBounds, reqH, reqH, layers, req, resp, storageBroker, true);
+                    if (fullWMSTile != null) {
+                        log.warning("Recombinining tiles to respond to WMS request!!!!");
+                        return fullWMSTile;
+                    } else {
+                        log.warning("Couldn't find fullWMSTile");
+                    }
+                }
+                if (gridSubset == null) {
                     requestMistmatchTarget.append("request does not align to grid(s) ");
                     for (GridSubset gs : crsMatchingGridSubsets) {
                         requestMistmatchTarget.append('\'').append(gs.getName()).append("' ");
@@ -696,6 +724,7 @@ public class GWC implements DisposableBean, InitializingBean, ApplicationContext
             }
 
         } catch (Exception e) {
+            e.printStackTrace();
             if (log.isLoggable(Level.FINE)) {
                 e.printStackTrace();
                 log.log(Level.FINE, "Exception caught checking gwc dispatch preconditions", e);
@@ -1407,6 +1436,11 @@ public class GWC implements DisposableBean, InitializingBean, ApplicationContext
             }
         }
         return response;
+    }
+
+    public boolean isFullWMSEnabled(TileLayer layer) {
+        // eventually, we can check the layer, too
+        return getXmlConfiguration().isFullWMSEnabled();
     }
 
     public boolean isQueryable(final GeoServerTileLayer geoServerTileLayer) {
