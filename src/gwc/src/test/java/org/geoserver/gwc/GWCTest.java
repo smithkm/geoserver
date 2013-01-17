@@ -894,7 +894,7 @@ public class GWCTest extends TestCase {
     private void assertDispatchMismatch(GetMapRequest request, String expectedReason) {
 
         StringBuilder target = new StringBuilder();
-        assertNull(mediator.dispatch(request, target));
+        assertNull(mediator.dispatchTile(request, target));
         assertTrue("mismatch reason '" + target + "' does not contain '" + expectedReason + "'",
                 target.toString().contains(expectedReason));
     }
@@ -943,7 +943,7 @@ public class GWCTest extends TestCase {
         ArgumentCaptor<ConveyorTile> captor = ArgumentCaptor.forClass(ConveyorTile.class);
         StringBuilder errors = new StringBuilder();
 
-        mediator.dispatch(request, errors);
+        mediator.dispatchTile(request, errors);
 
         assertTrue(errors.toString(), errors.length() == 0);
 
@@ -1059,7 +1059,7 @@ public class GWCTest extends TestCase {
         rawKvp.put(rawKvpParamName, rawKvpParamValue);
 
         StringBuilder errors = new StringBuilder();
-        ConveyorTile tileRequest = mediator.prepareRequest(tileLayer, request, errors);
+        ConveyorTile tileRequest = mediator.prepareTileRequest(tileLayer, request, errors);
         assertTrue(errors.toString(), errors.length() == 0);
 
         Map<String, String> fullParameters = tileRequest.getFullParameters();
