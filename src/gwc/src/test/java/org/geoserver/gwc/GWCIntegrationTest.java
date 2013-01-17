@@ -114,7 +114,7 @@ public class GWCIntegrationTest extends GeoServerSystemTestSupport {
         String request;
         MockHttpServletResponse response;
 
-        request = buildGetMapFullWMS(layerName, "EPSG:4326", null) + "&gwc.fullwms";
+        request = buildGetMapFullWMS(layerName, "EPSG:4326", null) + "&gwc_fullwms";
         response = getAsServletResponse(request);
 
         assertEquals(200, response.getStatusCode());

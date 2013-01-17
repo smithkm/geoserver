@@ -17,6 +17,7 @@ import java.util.Date;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletResponse;
 
 import org.aopalliance.intercept.MethodInterceptor;
@@ -73,22 +74,29 @@ public class CachingWebMapService implements MethodInterceptor {
         }
 
         final GetMapRequest request = getRequest(invocation);
-        boolean fullWMS = request.getRawKvp().containsKey("GWC.FULLWMS");
+        boolean fullWMS = request.getRawKvp().containsKey("GWC_FULLWMS");
         boolean tiled = request.isTiled();
-        if (!tiled && !fullWMS) {
-            return (WebMap) invocation.proceed();
-        }
-
         final StringBuilder requestMistmatchTarget = new StringBuilder();
-        ConveyorTile cachedTile = gwc.dispatch(request, requestMistmatchTarget);
+        @Nullable
+        ConveyorTile cachedTile;
+        if (tiled) {
+            cachedTile = gwc.dispatchTile(request, requestMistmatchTarget);
+        } else if (fullWMS) {
+            cachedTile = gwc.dispatchFullWMS(request, requestMistmatchTarget);
+        } else {
+            cachedTile = null;
+        }
 
         if (cachedTile == null) {
             WebMap dynamicResult = (WebMap) invocation.proceed();
-            dynamicResult.setResponseHeader("geowebcache-cache-result", MISS.toString());
-            dynamicResult.setResponseHeader("geowebcache-miss-reason",
-                    requestMistmatchTarget.toString());
+            if (dynamicResult != null && (tiled || fullWMS)) {
+                dynamicResult.setResponseHeader("geowebcache-cache-result", MISS.toString());
+                dynamicResult.setResponseHeader("geowebcache-miss-reason",
+                        requestMistmatchTarget.toString());
+            }
             return dynamicResult;
         }
+
         checkState(cachedTile.getTileLayer() != null);
         final TileLayer layer = cachedTile.getTileLayer();
 
@@ -123,7 +131,11 @@ public class CachingWebMapService implements MethodInterceptor {
 
         RawMap map = new RawMap(null, tileBytes, mimeType);
 
-        map.setContentDispositionHeader(null, "." + cachedTile.getMimeType().getFileExtension(), false);
+        map.setResponseHeader("Cache-Control", "no-cache");
+        map.setResponseHeader("ETag", etag);
+
+        map.setContentDispositionHeader(null, "." + cachedTile.getMimeType().getFileExtension(),
+                false);
 
         Object cacheAgeMax = getCacheAge(layer);
         LOGGER.log(Level.FINE, "Using cacheAgeMax {0}", cacheAgeMax);
@@ -134,7 +146,7 @@ public class CachingWebMapService implements MethodInterceptor {
         }
 
         setConditionalGetHeaders(map, cachedTile, request, etag);
-        setCacheMetadataHeaders(map, cachedTile, layer);
+        setCacheMetadataHeaders(map, cachedTile, layer, tiled);
 
         return map;
 
@@ -173,9 +185,10 @@ public class CachingWebMapService implements MethodInterceptor {
         }
     }
 
-    private void setCacheMetadataHeaders(RawMap map, ConveyorTile cachedTile, TileLayer layer) {
+    private void setCacheMetadataHeaders(RawMap map, ConveyorTile cachedTile, TileLayer layer, boolean tiled) {
+
         map.setResponseHeader("geowebcache-layer", layer.getName());
-        if (! "getmap".equals(cachedTile.getHint())) {
+        if (tiled) {
             long[] tileIndex = cachedTile.getTileIndex();
             CacheResult cacheResult = cachedTile.getCacheResult();
             GridSubset gridSubset = layer.getGridSubset(cachedTile.getGridSetId());

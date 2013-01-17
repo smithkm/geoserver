@@ -25,6 +25,7 @@ import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import javax.annotation.Nullable;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -588,7 +589,8 @@ public class GWC implements DisposableBean, InitializingBean, ApplicationContext
      * @return the GWC generated tile result if the request matches a tile cache, or {@code null}
      *         otherwise.
      */
-    public final ConveyorTile dispatch(final GetMapRequest request,
+    @Nullable
+    public final ConveyorTile dispatchTile(final GetMapRequest request,
             StringBuilder requestMistmatchTarget) {
 
         final String layerName = request.getRawKvp().get("LAYERS");
@@ -618,19 +620,9 @@ public class GWC implements DisposableBean, InitializingBean, ApplicationContext
             return null;
         }
 
-        ConveyorTile tileReq = prepareRequest(tileLayer, request, requestMistmatchTarget);
+        ConveyorTile tileReq = prepareTileRequest(tileLayer, request, requestMistmatchTarget);
         if (null == tileReq) {
             return null;
-        }
-        if ("getmap".equals(tileReq.getHint())) {
-            try {
-                GeoWebCacheExtensions.extensions(WMSService.class).get(0).handleRequest(tileReq);
-            } catch (GeoWebCacheException ex) {
-                ex.printStackTrace();
-            }
-            tileReq.setTileLayer(tileLayer);
-            tileReq.getStorageObject().setBlob(new ByteArrayResource( ((FakeHttpServletResponse)tileReq.servletResp).getBytes()));
-            return tileReq;
         }
         ConveyorTile tileResp = null;
         try {
@@ -642,7 +634,8 @@ public class GWC implements DisposableBean, InitializingBean, ApplicationContext
         return tileResp;
     }
 
-    ConveyorTile prepareRequest(TileLayer tileLayer, GetMapRequest request,
+    @Nullable
+    ConveyorTile prepareTileRequest(TileLayer tileLayer, GetMapRequest request,
             StringBuilder requestMistmatchTarget) {
 
         if (!isCachingPossible(tileLayer, request, requestMistmatchTarget)) {
@@ -693,22 +686,6 @@ public class GWC implements DisposableBean, InitializingBean, ApplicationContext
                 gridSubset = findBestMatchingGrid(tileBounds, crsMatchingGridSubsets, reqW, reqH,
                         matchingTileIndex);
                 if (gridSubset == null) {
-                    //@todo check fullWMS enabled
-
-                    // @todo better way of making layers string?
-                    String layers = request.getLayers().get(0).getName();
-                    FakeHttpServletRequest req = new FakeHttpServletRequest(request.getRawKvp(), new Cookie[0]);
-                    FakeHttpServletResponse resp = new FakeHttpServletResponse();
-                    ConveyorTile fullWMSTile = WMSService.fullWMSTile(matchingTileIndex,
-                            crsMatchingGridSubsets.get(0), tileBounds, reqH, reqH, layers, req, resp, storageBroker, true);
-                    if (fullWMSTile != null) {
-                        log.warning("Recombinining tiles to respond to WMS request!!!!");
-                        return fullWMSTile;
-                    } else {
-                        log.warning("Couldn't find fullWMSTile");
-                    }
-                }
-                if (gridSubset == null) {
                     requestMistmatchTarget.append("request does not align to grid(s) ");
                     for (GridSubset gs : crsMatchingGridSubsets) {
                         requestMistmatchTarget.append('\'').append(gs.getName()).append("' ");
@@ -744,6 +721,138 @@ public class GWC implements DisposableBean, InitializingBean, ApplicationContext
         tileReq = new ConveyorTile(storageBroker, layerName, gridSetId, tileIndex, mimeType,
                 fullParameters, servletReq, servletResp);
         return tileReq;
+    }
+
+    @Nullable
+    public final ConveyorTile dispatchFullWMS(final GetMapRequest request,
+            StringBuilder requestMistmatchTarget) {
+
+        final String layerName = request.getRawKvp().get("LAYERS");
+        /*
+         * This is a quick way of checking if the request was for a single layer. We can't really
+         * use request.getLayers() because in the event that a layerGroup was requested, the request
+         * parser turned it into a list of actual Layers
+         */
+        if (layerName.indexOf(',') != -1) {
+            requestMistmatchTarget.append("more than one layer requested");
+            return null;
+        }
+
+        if (!tld.layerExists(layerName)) {
+            requestMistmatchTarget.append("not a tile layer");
+            return null;
+        }
+
+        final TileLayer tileLayer;
+        try {
+            tileLayer = this.tld.getTileLayer(layerName);
+        } catch (GeoWebCacheException e) {
+            throw new RuntimeException(e);
+        }
+        if (!tileLayer.isEnabled()) {
+            requestMistmatchTarget.append("tile layer disabled");
+            return null;
+        }
+
+        ConveyorTile tileReq = prepareFullWMSRequest(tileLayer, request, requestMistmatchTarget);
+        if (null == tileReq) {
+            return null;
+        }
+        try {
+            WMSService wmsService = GeoWebCacheExtensions.extensions(WMSService.class).get(0);
+            wmsService.handleRequest(tileReq);
+        } catch (GeoWebCacheException ex) {
+            ex.printStackTrace();
+        }
+        tileReq.setTileLayer(tileLayer);
+        tileReq.getStorageObject().setBlob(
+                new ByteArrayResource(((FakeHttpServletResponse) tileReq.servletResp).getBytes()));
+        return tileReq;
+    }
+    
+    @Nullable
+    ConveyorTile prepareFullWMSRequest(TileLayer tileLayer, GetMapRequest request,
+            StringBuilder requestMistmatchTarget) {
+
+        boolean supportsPng;
+        try {
+            supportsPng = tileLayer.getMimeTypes().contains(MimeType.createFromFormat("image/png"));
+        } catch (MimeException e) {
+            throw new RuntimeException(e);
+        }
+        if (!supportsPng) {
+            requestMistmatchTarget.append(String.format("layer %s does not support png",
+                    tileLayer.getName()));
+            return null;
+        }
+        if (!isCachingPossible(tileLayer, request, requestMistmatchTarget)) {
+            return null;
+        }
+
+        final MimeType mimeType;
+        try {
+            mimeType = MimeType.createFromFormat(request.getFormat());
+            List<MimeType> tileLayerFormats = tileLayer.getMimeTypes();
+            if (!tileLayerFormats.contains(mimeType)) {
+                requestMistmatchTarget.append("layer has no tile cache for requested format "
+                        + request.getFormat());
+                return null;
+            }
+        } catch (MimeException me) {
+            // not a GWC supported format
+            requestMistmatchTarget.append("not a GWC supported format: ").append(me.getMessage());
+            return null;
+        }
+
+        final GridSubset gridSubset;
+        try {
+            final BoundingBox tileBounds;
+            {
+                Envelope bbox = request.getBbox();
+                tileBounds = new BoundingBox(bbox.getMinX(), bbox.getMinY(), bbox.getMaxX(),
+                        bbox.getMaxY());
+            }
+            final List<GridSubset> crsMatchingGridSubsets;
+            {
+                String srs = request.getSRS();
+                int epsgId = Integer.parseInt(srs.substring(srs.indexOf(':') + 1));
+                SRS srs2 = SRS.getSRS(epsgId);
+                crsMatchingGridSubsets = tileLayer.getGridSubsetsForSRS(srs2);
+            }
+
+            if (crsMatchingGridSubsets.isEmpty()) {
+                requestMistmatchTarget.append("no cache exists for requested CRS");
+                return null;
+            }
+
+            gridSubset = crsMatchingGridSubsets.get(0);
+            final int reqW = request.getWidth();
+            final int reqH = request.getHeight();
+            // @todo check fullWMS enabled
+
+            final String layerName = tileLayer.getName();
+            FakeHttpServletRequest req = new FakeHttpServletRequest(request.getRawKvp(),
+                    new Cookie[0]);
+            FakeHttpServletResponse resp = new FakeHttpServletResponse();
+            // prepare a conveyor tile with proper request parameter and the "getmap" hint
+            ConveyorTile fullWMSTile = WMSService.fullWMSTile(null, gridSubset, tileBounds, reqW,
+                    reqH, layerName, req, resp, storageBroker, true);
+            if (fullWMSTile == null) {
+                log.warning("Couldn't find fullWMSTile");
+            }
+            return fullWMSTile;
+        } catch (Exception e) {
+            e.printStackTrace();
+            if (log.isLoggable(Level.FINE)) {
+                e.printStackTrace();
+                log.log(Level.FINE, "Exception caught checking gwc dispatch preconditions", e);
+            }
+            Throwable rootCause = getRootCause(e);
+            requestMistmatchTarget.append("exception occurred: ")
+                    .append(rootCause.getClass().getSimpleName()).append(": ")
+                    .append(e.getMessage());
+            return null;
+        }
     }
 
     /**
