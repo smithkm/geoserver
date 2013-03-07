@@ -107,7 +107,7 @@ class FakeHttpServletRequest implements HttpServletRequest {
     }
 
     public StringBuffer getRequestURL() {
-        throw new ServletDebugException();
+        return new StringBuffer("http://localhost:8080/geoserver/gwc/service/wms");
     }
 
     public String getRequestedSessionId() {
