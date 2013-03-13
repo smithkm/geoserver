@@ -8,10 +8,13 @@ import static junit.framework.Assert.*;
 import static org.geoserver.data.test.MockData.*;
 import static org.geoserver.gwc.GWC.*;
 
+import java.awt.image.BufferedImage;
+import java.awt.image.Raster;
 import java.io.File;
 import java.io.IOException;
 import java.util.Date;
 
+import javax.imageio.ImageIO;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.httpclient.util.DateUtil;
@@ -39,6 +42,7 @@ import org.geowebcache.layer.TileLayer;
 import org.geowebcache.layer.TileLayerDispatcher;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Matchers;
 
 import com.mockrunner.mock.web.MockHttpServletRequest;
 import com.mockrunner.mock.web.MockHttpServletResponse;
@@ -123,7 +127,33 @@ public class GWCIntegrationTest extends GeoServerSystemTestSupport {
 
         byte[] junk = new byte[64000];
         int r = getBinaryInputStream(response).read(junk);
-        new FileOutputStream("farby.png").write(junk,0,r);
+        
+        Raster imgExpected = ImageIO.read(getClass().getClassLoader().getResource("farby.png")).getData();
+        Raster imgResult = ImageIO.read(getBinaryInputStream(response)).getData();
+        
+        // Check to see that the two images are the same, to within a tolerance.
+        // TODO: Use a better image comparison
+        
+        int width = imgExpected.getWidth();
+        int height = imgExpected.getHeight();
+        assertEquals(width, imgResult.getWidth());
+        assertEquals(height, imgResult.getHeight());
+        
+        double totalDifference = 0.0d;
+        
+        final long pixels = ((long)width)*height;
+        final int bands = 4;
+        
+        for(int x=0; x<width; x++) {
+            for(int y=0; y<height; y++) {
+                for (int b=0; b<bands; b++) {
+                    double diff = (imgResult.getSample(x, y, b) - imgExpected.getSample(x, y, b))/255.0d;
+                    totalDifference += diff*diff;
+                }
+            }
+        }
+        double rms = Math.sqrt(totalDifference/pixels/bands);
+        assertTrue(rms<0.002d);
     }
 
     @Test public void testDirectWMSIntegrationResponseHeaders() throws Exception {
