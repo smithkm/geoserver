@@ -50,6 +50,7 @@ import java.io.FileOutputStream;
 import java.util.Enumeration;
 import org.geoserver.gwc.layer.GeoServerTileLayer;
 import org.geotools.geometry.jts.ReferencedEnvelope;
+import org.geotools.image.test.ImageAssert;
 
 public class GWCIntegrationTest extends GeoServerSystemTestSupport {
 
@@ -128,32 +129,10 @@ public class GWCIntegrationTest extends GeoServerSystemTestSupport {
         byte[] junk = new byte[64000];
         int r = getBinaryInputStream(response).read(junk);
         
-        Raster imgExpected = ImageIO.read(getClass().getClassLoader().getResource("farby.png")).getData();
-        Raster imgResult = ImageIO.read(getBinaryInputStream(response)).getData();
+        BufferedImage imgExpected = ImageIO.read(getClass().getClassLoader().getResource("farby.png"));
+        BufferedImage imgResult = ImageIO.read(getBinaryInputStream(response));
         
-        // Check to see that the two images are the same, to within a tolerance.
-        // TODO: Use a better image comparison
-        
-        int width = imgExpected.getWidth();
-        int height = imgExpected.getHeight();
-        assertEquals(width, imgResult.getWidth());
-        assertEquals(height, imgResult.getHeight());
-        
-        double totalDifference = 0.0d;
-        
-        final long pixels = ((long)width)*height;
-        final int bands = 4;
-        
-        for(int x=0; x<width; x++) {
-            for(int y=0; y<height; y++) {
-                for (int b=0; b<bands; b++) {
-                    double diff = (imgResult.getSample(x, y, b) - imgExpected.getSample(x, y, b))/255.0d;
-                    totalDifference += diff*diff;
-                }
-            }
-        }
-        double rms = Math.sqrt(totalDifference/pixels/bands);
-        assertTrue(rms<0.002d);
+        ImageAssert.assertEquals(imgExpected,imgResult, 0);
     }
 
     @Test public void testDirectWMSIntegrationResponseHeaders() throws Exception {
