@@ -19,7 +19,7 @@ import org.geotools.util.Version;
  * 
  * @author Justin Deoliveira, The Open Planning Project
  */
-public interface ServiceInfo extends Info {
+public interface ServiceInfo extends ConfigInfo {
 
     /**
      * Identifer.

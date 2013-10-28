@@ -4,14 +4,12 @@
  */
 package org.geoserver.config;
 
-import org.geoserver.catalog.Info;
-
 /**
  * Logging configuration.
  * 
  * @author Justin Deoliveira, OpenGeo
  */
-public interface LoggingInfo extends Info {
+public interface LoggingInfo extends ConfigInfo {
 
     /**
      * The GeoServer logging level.

@@ -15,7 +15,7 @@ import org.geoserver.catalog.WorkspaceInfo;
  *
  * @author Justin Deoliveira, OpenGeo
  */
-public interface SettingsInfo extends Info {
+public interface SettingsInfo extends ConfigInfo {
 
     /**
      * The workspace the settings are specific to.

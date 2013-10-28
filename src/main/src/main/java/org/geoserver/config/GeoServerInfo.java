@@ -15,7 +15,7 @@ import org.geoserver.catalog.MetadataMap;
  * @author Justin Deoliveira, The Open Planning Project
  * 
  */
-public interface GeoServerInfo extends Info {
+public interface GeoServerInfo extends ConfigInfo {
 
     /**
      * Identifier.

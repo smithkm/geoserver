@@ -4,19 +4,28 @@
  */
 package org.geoserver.catalog.event.impl;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import org.geoserver.catalog.CatalogInfo;
 import org.geoserver.catalog.event.CatalogEvent;
 
 public class CatalogEventImpl implements CatalogEvent {
-
-	CatalogInfo source;
-	
-	
-	public CatalogInfo getSource() {
-		return source;
-	}
-
-	public void setSource(CatalogInfo source) {
-		this.source = source;
-	}
+    
+    CatalogInfo source;
+    
+    Map<String, Object> hints = new HashMap<String, Object>();
+    
+    public CatalogInfo getSource() {
+        return source;
+    }
+    
+    public void setSource(CatalogInfo source) {
+        this.source = source;
+    }
+    
+    @Override
+    public Map<String, Object> getHints() {
+        return hints;
+    }
 }

@@ -12,7 +12,7 @@ import org.geoserver.catalog.Info;
  * @author Justin Deoliveira, The Open Planning Project
  * 
  */
-public interface ContactInfo extends Info {
+public interface ContactInfo extends ConfigInfo {
 
     /**
      * Identifier.

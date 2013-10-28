@@ -5,13 +5,14 @@
 package org.geoserver.catalog.event;
 
 import org.geoserver.catalog.CatalogInfo;
+import org.geoserver.event.GeoServerEvent;
 
 /**
  * Catalog event.
  * 
  * @author Justin Deoliveira, The Open Planning Project
  */
-public interface CatalogEvent {
+public interface CatalogEvent extends GeoServerEvent {
 
     /**
      * The source of the event.
