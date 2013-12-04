@@ -16,6 +16,7 @@ import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.MetadataMap;
 import org.geoserver.catalog.event.CatalogListener;
 import org.geoserver.catalog.impl.CatalogImpl;
+import org.geoserver.config.event.ConfigListener;
 import org.geoserver.config.impl.CoverageAccessInfoImpl;
 import org.geoserver.config.impl.GeoServerInfoImpl;
 import org.geoserver.config.util.LegacyConfigurationImporter;
@@ -33,7 +34,7 @@ import org.geoserver.platform.GeoServerResourceLoader;
  */
 public class DefaultGeoServerLoader extends GeoServerLoader {
     
-    ConfigurationListener listener;
+    ConfigListener listener;
     GeoServerPersister persister; 
 
     public DefaultGeoServerLoader(GeoServerResourceLoader resourceLoader) {

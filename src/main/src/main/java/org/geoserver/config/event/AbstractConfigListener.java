@@ -68,5 +68,10 @@ public abstract class AbstractConfigListener implements ConfigListener {
     public void handleServiceRemove(ConfigRemoveEvent<ServiceInfo> event) {
         
     }
-
+    
+    @Override
+    public void handleServiceAdd(ConfigAddEvent<ServiceInfo> event) {
+        
+    }
+    
 }

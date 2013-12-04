@@ -11,11 +11,15 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.geoserver.catalog.WorkspaceInfo;
+import org.geoserver.config.event.AbstractConfigListener;
+import org.geoserver.config.event.ConfigModifyEvent;
+import org.geoserver.config.event.ConfigPostModifyEvent;
+import org.geoserver.config.event.ConfigRemoveEvent;
 import org.geoserver.config.util.XStreamServiceLoader;
 import org.geoserver.platform.GeoServerResourceLoader;
 import org.geotools.util.logging.Logging;
 
-public class ServicePersister extends ConfigurationListenerAdapter {
+public class ServicePersister extends AbstractConfigListener {
 
     static Logger LOGGER = Logging.getLogger( "org.geoserver" );
 
@@ -31,18 +35,17 @@ public class ServicePersister extends ConfigurationListenerAdapter {
     }
 
     @Override
-    public void handleServiceChange(ServiceInfo service, List<String> propertyNames,
-            List<Object> oldValues, List<Object> newValues) {
+    public void handleServiceModify(ConfigModifyEvent<ServiceInfo> event) {
 
-        XStreamServiceLoader loader = findServiceLoader(service);
+        XStreamServiceLoader loader = findServiceLoader(event.getSource());
 
         //handle the case of a service changing workspace and move the file
-        int i = propertyNames.indexOf("workspace");
+        int i = event.getPropertyNames().indexOf("workspace");
         if (i != -1) {
             //TODO: share code with GeoServerPersister
-            WorkspaceInfo old = (WorkspaceInfo) oldValues.get(i);
+            WorkspaceInfo old = (WorkspaceInfo) event.getOldValues().get(i);
             if (old != null) {
-                WorkspaceInfo ws = (WorkspaceInfo) newValues.get(i);
+                WorkspaceInfo ws = (WorkspaceInfo) event.getNewValues().get(i);
                 File f;
                 try {
                     f = new File(dir(ws), loader.getFilename());
@@ -54,25 +57,27 @@ public class ServicePersister extends ConfigurationListenerAdapter {
         }
     }
 
-    public void handlePostServiceChange(ServiceInfo service) {
-        XStreamServiceLoader loader = findServiceLoader(service);
+    @Override
+    public void handleServicePostModify(ConfigPostModifyEvent<ServiceInfo> event) {
+        XStreamServiceLoader loader = findServiceLoader(event.getSource());
 
         try {
             //TODO: handle workspace move, factor this class out into
             // separate persister class
-            File directory = service.getWorkspace() != null 
-                ? dir(service.getWorkspace(), true) : null;
-            loader.save( service, geoServer, directory);
+            File directory = event.getSource().getWorkspace() != null 
+                ? dir(event.getSource().getWorkspace(), true) : null;
+            loader.save(event.getSource(), geoServer, directory);
         } catch (Throwable t) {
             throw new RuntimeException( t );
             //LOGGER.log(Level.SEVERE, "Error occurred while saving configuration", t);
         }
     }
 
-    public void handleServiceRemove(ServiceInfo service) {
-        XStreamServiceLoader loader = findServiceLoader(service);
+    @Override
+    public void handleServiceRemove(ConfigRemoveEvent<ServiceInfo> event) {
+        XStreamServiceLoader loader = findServiceLoader(event.getSource());
         try {
-            File dir = service.getWorkspace() != null ? dir(service.getWorkspace()) 
+            File dir = event.getSource().getWorkspace() != null ? dir(event.getSource().getWorkspace()) 
                 : resourceLoader.getBaseDirectory();
             new File(dir, loader.getFilename()).delete();
         }

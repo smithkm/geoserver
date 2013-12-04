@@ -69,6 +69,9 @@ import org.geoserver.config.GeoServerInfo;
 import org.geoserver.config.LoggingInfo;
 import org.geoserver.config.ServiceInfo;
 import org.geoserver.config.SettingsInfo;
+import org.geoserver.config.event.AbstractConfigListener;
+import org.geoserver.config.event.ConfigPostModifyEvent;
+import org.geoserver.config.event.ConfigRemoveEvent;
 import org.geoserver.config.impl.CoverageAccessInfoImpl;
 import org.geoserver.config.impl.GeoServerInfoImpl;
 import org.geoserver.config.impl.JAIInfoImpl;
@@ -1029,36 +1032,36 @@ public class ConfigDatabase {
     /**
      * Listens to configuration events clearing cache entires when resources are modified.
      */
-    public class ConfigClearingListener extends ConfigurationListenerAdapter {
+    public class ConfigClearingListener extends AbstractConfigListener {
 
         @Override
-        public void handlePostGlobalChange(GeoServerInfo global) {
-            clear(global);
+        public void handleGlobalPostModify(ConfigPostModifyEvent<GeoServerInfo> event) {
+            clear(event.getSource());
         }
 
         @Override
-        public void handleSettingsPostModified(SettingsInfo settings) {
-            clear(settings);
+        public void handleSettingsPostModify(ConfigPostModifyEvent<SettingsInfo> event) {
+            clear(event.getSource());
         }
 
         @Override
-        public void handleSettingsRemoved(SettingsInfo settings) {
-            clear(settings);
+        public void handleSettingsRemove(ConfigRemoveEvent<SettingsInfo> event) {
+            clear(event.getSource());
         }
 
         @Override
-        public void handlePostLoggingChange(LoggingInfo logging) {
-            clear(logging);
+        public void handleLoggingPostModify(ConfigPostModifyEvent<LoggingInfo> event) {
+            clear(event.getSource());
         }
 
         @Override
-        public void handlePostServiceChange(ServiceInfo service) {
-            clear(service);
+        public void handleServicePostModify(ConfigPostModifyEvent<ServiceInfo> event) {
+            clear(event.getSource());
         }
 
         @Override
-        public void handleServiceRemove(ServiceInfo service) {
-            clear(service);
+        public void handleServiceRemove(ConfigRemoveEvent<ServiceInfo> event) {
+            clear(event.getSource());
         }
     }
 

@@ -12,11 +12,16 @@ import org.geoserver.catalog.event.CatalogListener;
 import org.geoserver.catalog.event.CatalogModifyEvent;
 import org.geoserver.catalog.event.CatalogPostModifyEvent;
 import org.geoserver.catalog.event.CatalogRemoveEvent;
+import org.geoserver.config.event.ConfigAddEvent;
+import org.geoserver.config.event.ConfigListener;
+import org.geoserver.config.event.ConfigModifyEvent;
+import org.geoserver.config.event.ConfigPostModifyEvent;
+import org.geoserver.config.event.ConfigRemoveEvent;
 
 /**
  * Updates the updateSequence on Catalog events.
  */
-class UpdateSequenceListener implements CatalogListener, ConfigurationListener {
+class UpdateSequenceListener implements CatalogListener, ConfigListener {
     
     GeoServer geoServer;
     boolean updating = false;
@@ -43,77 +48,89 @@ class UpdateSequenceListener implements CatalogListener, ConfigurationListener {
         }
     }
 
+    @Override
     public void handleAddEvent(CatalogAddEvent event) throws CatalogException {
         incrementSequence();
     }
 
+    @Override
     public void handleRemoveEvent(CatalogRemoveEvent event) throws CatalogException {
         incrementSequence();
     }
 
+    @Override
     public void handleModifyEvent(CatalogModifyEvent event) throws CatalogException {
         // never mind: we need the Post event
     }
 
+    @Override
     public void handlePostModifyEvent(CatalogPostModifyEvent event) throws CatalogException {
         incrementSequence();
     }
 
+    @Override
     public void reloaded() {
         // never mind
     }
 
-    public void handleGlobalChange(GeoServerInfo global, List<String> propertyNames,
-            List<Object> oldValues, List<Object> newValues) {
+    @Override
+    public void handleGlobalModify(ConfigModifyEvent<GeoServerInfo> event) {
         // we use the post event
         
     }
 
     @Override
-    public void handleSettingsAdded(SettingsInfo settings) {
+    public void handleSettingsAdd(ConfigAddEvent<SettingsInfo> event) {
         incrementSequence();
     }
 
     @Override
-    public void handleSettingsModified(SettingsInfo settings, List<String> propertyNames,
-            List<Object> oldValues, List<Object> newValues) {
+    public void handleSettingsModify(ConfigModifyEvent<SettingsInfo> event) {
         // we use post event
     }
 
     @Override
-    public void handleSettingsPostModified(SettingsInfo settings) {
+    public void handleSettingsPostModify(ConfigPostModifyEvent<SettingsInfo> event) {
         incrementSequence();
     }
 
     @Override
-    public void handleSettingsRemoved(SettingsInfo settings) {
+    public void handleSettingsRemove(ConfigRemoveEvent<SettingsInfo> event) {
         incrementSequence();
     }
 
-    public void handleLoggingChange(LoggingInfo logging, List<String> propertyNames,
-            List<Object> oldValues, List<Object> newValues) {
+    @Override
+    public void handleLoggingModify(ConfigModifyEvent<LoggingInfo> event) {
         // we don't update the sequence for a logging change, the client cannot notice it   
     }
 
-    public void handlePostGlobalChange(GeoServerInfo global) {
+    @Override
+    public void handleGlobalPostModify(ConfigPostModifyEvent<GeoServerInfo> event) {
         incrementSequence();
     }
 
-    public void handlePostLoggingChange(LoggingInfo logging) {
+    @Override
+    public void handleLoggingPostModify(ConfigPostModifyEvent<LoggingInfo> event) {
         // we don't update the sequence for a logging change, the client cannot notice it
     }
 
-    public void handlePostServiceChange(ServiceInfo service) {
+    @Override
+    public void handleServicePostModify(ConfigPostModifyEvent<ServiceInfo> event) {
         incrementSequence();
     }
 
-    public void handleServiceChange(ServiceInfo service, List<String> propertyNames,
-            List<Object> oldValues, List<Object> newValues) {
+    @Override
+    public void handleServiceModify(ConfigModifyEvent<ServiceInfo> event) {
         // we use the post version        
     }
 
     @Override
-    public void handleServiceRemove(ServiceInfo service) {
+    public void handleServiceRemove(ConfigRemoveEvent<ServiceInfo> event) {
+        incrementSequence();
+    }
+
+    @Override
+    public void handleServiceAdd(ConfigAddEvent<ServiceInfo> event) {
         incrementSequence();
     }
 
