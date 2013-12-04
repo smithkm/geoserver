@@ -38,17 +38,23 @@ import org.geoserver.catalog.event.CatalogListener;
 import org.geoserver.catalog.event.CatalogModifyEvent;
 import org.geoserver.catalog.event.CatalogPostModifyEvent;
 import org.geoserver.catalog.event.CatalogRemoveEvent;
+import org.geoserver.config.event.ConfigAddEvent;
+import org.geoserver.config.event.ConfigEvent;
+import org.geoserver.config.event.ConfigListener;
+import org.geoserver.config.event.ConfigModifyEvent;
+import org.geoserver.config.event.ConfigRemoveEvent;
 import org.geoserver.config.util.XStreamPersister;
 import org.geoserver.platform.GeoServerResourceLoader;
 import org.geotools.data.DataUtilities;
 import org.geotools.styling.AbstractStyleVisitor;
 import org.geotools.styling.ExternalGraphic;
 import org.geotools.util.logging.Logging;
+import org.geoserver.config.event.ConfigPostModifyEvent;
 
 import static org.geoserver.data.util.IOUtils.rename;
 import static org.geoserver.data.util.IOUtils.xStreamPersist;
 
-public class GeoServerPersister implements CatalogListener, ConfigurationListener {
+public class GeoServerPersister implements CatalogListener, ConfigListener {
 
     /**
      * logging instance
@@ -65,6 +71,7 @@ public class GeoServerPersister implements CatalogListener, ConfigurationListene
         this.xp = xp;
     }
     
+    @Override
     public void handleAddEvent(CatalogAddEvent event) {
         Object source = event.getSource();
         try {
@@ -107,6 +114,7 @@ public class GeoServerPersister implements CatalogListener, ConfigurationListene
         }
     }
 
+    @Override
     public void handleModifyEvent(CatalogModifyEvent event) {
         Object source = event.getSource();
         
@@ -203,6 +211,7 @@ public class GeoServerPersister implements CatalogListener, ConfigurationListene
         }
     }
     
+    @Override
     public void handlePostModifyEvent(CatalogPostModifyEvent event) {
         Object source = event.getSource();
         try {
@@ -245,6 +254,7 @@ public class GeoServerPersister implements CatalogListener, ConfigurationListene
         }
     }
 
+    @Override
     public void handleRemoveEvent(CatalogRemoveEvent event) {
         Object source = event.getSource();
         try {
@@ -287,29 +297,43 @@ public class GeoServerPersister implements CatalogListener, ConfigurationListene
         }
     }
 
-    public void handleGlobalChange(GeoServerInfo global, List<String> propertyNames,
-            List<Object> oldValues, List<Object> newValues) {
+    @Override
+    public void handleGlobalModify(ConfigModifyEvent<GeoServerInfo> event) {
     }
     
-    public void handlePostGlobalChange(GeoServerInfo global) {
+    @Override
+    public void handleGlobalPostModify(ConfigPostModifyEvent<GeoServerInfo> event) {
         try {
-            persist( global, new File( rl.getBaseDirectory(), "global.xml") );
+            persist( event.getSource(), new File( rl.getBaseDirectory(), "global.xml") );
         } 
         catch (IOException e) {
             throw new RuntimeException( e );
         }
     }
 
-    public void handleSettingsAdded(SettingsInfo settings) {
-        handleSettingsPostModified(settings);
+    protected void settingsChanged(ConfigEvent<SettingsInfo> event) {
+        SettingsInfo settings = event.getSource();
+        LOGGER.fine( "Persisting settings " + settings );
+        try {
+            persist(settings, file(settings));
+        }
+        catch(IOException e) {
+            throw new RuntimeException( e );
+        }
+    }
+    
+    @Override
+    public void handleSettingsAdd(ConfigAddEvent<SettingsInfo> event) {
+        settingsChanged(event);
     }
 
-    public void handleSettingsModified(SettingsInfo settings, List<String> propertyNames,
-            List<Object> oldValues, List<Object> newValues) {
+    @Override
+    public void handleSettingsModify(ConfigModifyEvent<SettingsInfo> event) {
         //handle case of settings changing workspace
-        int i = propertyNames.indexOf( "workspace");
+        SettingsInfo settings = event.getSource();
+        int i = event.getPropertyNames().indexOf( "workspace");
         if ( i > -1 ) {
-            WorkspaceInfo newWorkspace = (WorkspaceInfo) newValues.get( i );
+            WorkspaceInfo newWorkspace = (WorkspaceInfo) event.getNewValues().get( i );
             LOGGER.fine( "Moving settings '" + settings + " to workspace: " + newWorkspace);
 
             try {
@@ -321,17 +345,14 @@ public class GeoServerPersister implements CatalogListener, ConfigurationListene
         }
     }
 
-    public void handleSettingsPostModified(SettingsInfo settings) {
-        LOGGER.fine( "Persisting settings " + settings );
-        try {
-            persist(settings, file(settings));
-        }
-        catch(IOException e) {
-            throw new RuntimeException( e );
-        }
+    @Override
+    public void handleSettingsPostModify(ConfigPostModifyEvent<SettingsInfo> event) {
+        settingsChanged(event);
     }
 
-    public void handleSettingsRemoved(SettingsInfo settings) {
+    @Override
+    public void handleSettingsRemove(ConfigRemoveEvent<SettingsInfo> event) {
+        SettingsInfo settings = event.getSource();
         LOGGER.fine( "Removing settings " + settings );
         try {
             file(settings).delete();
@@ -340,30 +361,34 @@ public class GeoServerPersister implements CatalogListener, ConfigurationListene
         }
     }
 
-    public void handleLoggingChange(LoggingInfo logging, List<String> propertyNames,
-            List<Object> oldValues, List<Object> newValues) {
+    @Override
+    public void handleLoggingModify(ConfigModifyEvent<LoggingInfo> event) {
     }
     
-    public void handlePostLoggingChange(LoggingInfo logging) {
+    @Override
+    public void handleLoggingPostModify(ConfigPostModifyEvent<LoggingInfo> event) {
         try {
-            persist( logging, new File( rl.getBaseDirectory(), "logging.xml") );
+            persist( event.getSource(), new File( rl.getBaseDirectory(), "logging.xml") );
         } 
         catch (IOException e) {
             throw new RuntimeException( e );
         }
     }
     
-    public void handleServiceAdded(ServiceInfo service) {
+    @Override
+    public void handleServiceAdd(ConfigAddEvent<ServiceInfo> event) {
     }
     
-    public void handleServiceChange(ServiceInfo service, List<String> propertyNames,
-            List<Object> oldValues, List<Object> newValues) {
+    @Override
+    public void handleServiceModify(ConfigModifyEvent<ServiceInfo> event) {
     }
     
-    public void handlePostServiceChange(ServiceInfo service) {
+    @Override
+    public void handleServicePostModify(ConfigPostModifyEvent<ServiceInfo> event) {
     }
 
-    public void handleServiceRemove(ServiceInfo service) {
+    @Override
+    public void handleServiceRemove(ConfigRemoveEvent<ServiceInfo> event) {
     }
 
     public void reloaded() {
