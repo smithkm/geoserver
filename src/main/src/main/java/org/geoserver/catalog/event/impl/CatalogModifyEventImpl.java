@@ -12,31 +12,31 @@ import org.geoserver.catalog.event.CatalogModifyEvent;
 public class CatalogModifyEventImpl extends CatalogEventImpl implements
         CatalogModifyEvent {
 
-    List propertyNames = new ArrayList();
-    List oldValues = new ArrayList();
-    List newValues = new ArrayList();
+    List<String> propertyNames = new ArrayList<String>();
+    List<?> oldValues = new ArrayList<Object>();
+    List<?> newValues = new ArrayList<Object>();
 
-    public List getPropertyNames() {
+    public List<String> getPropertyNames() {
         return propertyNames;
     }
 
-    public void setPropertyNames(List propertyNames) {
+    public void setPropertyNames(List<String> propertyNames) {
         this.propertyNames = propertyNames;
     }
 
-    public List getNewValues() {
+    public List<?> getNewValues() {
         return newValues;
     }
 
-    public void setNewValues(List newValues) {
+    public void setNewValues(List<?> newValues) {
         this.newValues = newValues;
     }
 
-    public List getOldValues() {
+    public List<?> getOldValues() {
         return oldValues;
     }
 
-    public void setOldValues(List oldValues) {
+    public void setOldValues(List<?> oldValues) {
         this.oldValues = oldValues;
     }
 

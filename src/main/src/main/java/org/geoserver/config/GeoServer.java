@@ -9,6 +9,7 @@ import java.util.List;
 
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.WorkspaceInfo;
+import org.geoserver.config.event.ConfigListener;
 
 /**
  * Facade providing access to the GeoServer configuration.
@@ -221,14 +222,17 @@ public interface GeoServer {
      */
     void setFactory(GeoServerFactory factory);
     
+    
     /**
      * Adds a listener to the configuration.
      */
+    @Deprecated
     void addListener( ConfigurationListener listener );
 
     /**
      * Removes a listener from the configuration.
      */
+    @Deprecated
     void removeListener( ConfigurationListener listener );
     
     /**
@@ -237,8 +241,27 @@ public interface GeoServer {
      * This list should not be modified by client code.
      * </p>
      */
+    @Deprecated
     Collection<ConfigurationListener> getListeners();
     
+    /**
+     * Adds a listener to the configuration.
+     */
+    void addListener( ConfigListener listener );
+
+    /**
+     * Removes a listener from the configuration.
+     */
+    void removeListener( ConfigListener listener );
+    
+    /**
+     * Returns all configuration listeners.
+     * <p>
+     * This list should not be modified by client code.
+     * </p>
+     */
+    Collection<ConfigListener> getConfigListeners();
+   
     /**
      * Fires the event for the global configuration being modified.
      * <p> 

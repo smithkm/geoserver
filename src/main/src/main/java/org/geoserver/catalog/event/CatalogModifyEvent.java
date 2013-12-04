@@ -26,10 +26,10 @@ public interface CatalogModifyEvent extends CatalogEvent {
     /**
      * The old values of the properties that were modified.
      */
-    List<Object> getOldValues();
+    List getOldValues();
 
     /**
      * The new values of the properties that were modified.
      */
-    List<Object> getNewValues();
+    List getNewValues();
 }

@@ -9,7 +9,10 @@ import java.util.List;
 /**
  *  
  * @author Justin Deoliveira, The Open Planning Project
+ * 
+ * @deprecated See {@link org.geoserver.config.event.ConfigListener}
  */
+@Deprecated
 public interface ConfigurationListener {
 
     /**

@@ -4,8 +4,10 @@
  */
 package org.geoserver.config.impl;
 
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -14,6 +16,7 @@ import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.impl.CatalogImpl;
 import org.geoserver.catalog.impl.LocalWorkspaceCatalog;
 import org.geoserver.catalog.WorkspaceInfo;
+import org.geoserver.config.ConfigInfo;
 import org.geoserver.config.ConfigurationListener;
 import org.geoserver.config.GeoServer;
 import org.geoserver.config.GeoServerFacade;
@@ -24,6 +27,17 @@ import org.geoserver.config.GeoServerLoaderProxy;
 import org.geoserver.config.LoggingInfo;
 import org.geoserver.config.ServiceInfo;
 import org.geoserver.config.SettingsInfo;
+import org.geoserver.config.event.ConfigAddEvent;
+import org.geoserver.config.event.ConfigEvent;
+import org.geoserver.config.event.ConfigListener;
+import org.geoserver.config.event.ConfigModifyEvent;
+import org.geoserver.config.event.ConfigPostModifyEvent;
+import org.geoserver.config.event.ConfigRemoveEvent;
+import org.geoserver.config.event.impl.ConfigAddEventImpl;
+import org.geoserver.config.event.impl.ConfigModifyEventImpl;
+import org.geoserver.config.event.impl.ConfigPostModifyEventImpl;
+import org.geoserver.config.event.impl.ConfigRemoveEventImpl;
+import org.geoserver.config.event.impl.ConfigurationListenerWrapper;
 import org.geoserver.ows.LocalWorkspace;
 import org.geoserver.ows.util.OwsUtils;
 import org.geoserver.platform.GeoServerExtensions;
@@ -57,7 +71,7 @@ public class GeoServerImpl implements GeoServer, ApplicationContextAware {
     /**
      * listeners
      */
-    List<ConfigurationListener> listeners = new ArrayList<ConfigurationListener>();
+    List<ConfigListener> listeners = new ArrayList<ConfigListener>();
 
     public GeoServerImpl() {
         this.facade = new DefaultGeoServerFacade(this);
@@ -156,49 +170,37 @@ public class GeoServerImpl implements GeoServer, ApplicationContextAware {
         resolveCollections(settings);
     }
 
-    void fireSettingsAdded(SettingsInfo settings) {
-        for ( ConfigurationListener l : listeners ) {
-            try {
-                l.handleSettingsAdded(settings);
-            }
-            catch( Exception e ) {
-                LOGGER.log(Level.SEVERE, "Error occurred processing a configuration change listener", e);
-            }
-        }
+    
+    public void fireSettingsAdded(SettingsInfo settings) {
+        ConfigAddEventImpl<SettingsInfo> evt = new ConfigAddEventImpl<SettingsInfo>();
+        evt.setSource(settings);
+        
+        event(evt);
     }
 
    public void fireSettingsModified(SettingsInfo settings, List<String> changed, List oldValues, 
             List newValues) {
-       for ( ConfigurationListener l : listeners ) {
-           try {
-               l.handleSettingsModified(settings, changed, oldValues, newValues);
-           }
-           catch( Exception e ) {
-               LOGGER.log(Level.SEVERE, "Error occurred processing a configuration change listener", e);
-           }
-       }
+        ConfigModifyEventImpl<SettingsInfo> evt = new ConfigModifyEventImpl<SettingsInfo>();
+        evt.setSource(settings);
+        evt.setPropertyNames(changed);
+        evt.setNewValues(newValues);
+        evt.setOldValues(oldValues);
+        
+        event(evt);
     }
 
-    void fireSettingsPostModified(SettingsInfo settings) {
-        for ( ConfigurationListener l : listeners ) {
-            try {
-                l.handleSettingsPostModified(settings);
-            }
-            catch( Exception e ) {
-                LOGGER.log(Level.SEVERE, "Error occurred processing a configuration change listener", e);
-            }
-        }
+   public void fireSettingsPostModified(SettingsInfo settings) {
+       ConfigPostModifyEventImpl<SettingsInfo> evt = new ConfigPostModifyEventImpl<SettingsInfo>();
+       evt.setSource(settings);
+       
+       event(evt);
     }
 
-    void fireSettingsRemoved(SettingsInfo settings) {
-        for ( ConfigurationListener l : listeners ) {
-            try {
-                l.handleSettingsRemoved(settings);
-            }
-            catch( Exception e ) {
-                LOGGER.log(Level.SEVERE, "Error occurred processing a configuration change listener", e);
-            }
-        }
+   public void fireSettingsRemoved(SettingsInfo settings) {
+       ConfigRemoveEventImpl<SettingsInfo> evt = new ConfigRemoveEventImpl<SettingsInfo>();
+       evt.setSource(settings);
+       
+       event(evt);
     }
 
     public LoggingInfo getLogging() {
@@ -306,51 +308,37 @@ public class GeoServerImpl implements GeoServer, ApplicationContextAware {
     } 
     
     void fireGlobalPostModified() {
-        for ( ConfigurationListener l : listeners ) {
-            try {
-                l.handlePostGlobalChange( facade.getGlobal() );
-            }
-            catch( Exception e ) {
-                LOGGER.log(Level.SEVERE, "Error occurred processing a configuration change listener", e);
-            }
-        }
+        ConfigPostModifyEventImpl<GeoServerInfo> evt = new ConfigPostModifyEventImpl<GeoServerInfo>();
+        evt.setSource(facade.getGlobal());
+        event(evt);
     }
     
     public void fireGlobalModified(GeoServerInfo global, List<String> changed, List oldValues, 
         List newValues) {
+        ConfigModifyEventImpl<GeoServerInfo> evt = new ConfigModifyEventImpl<GeoServerInfo>();
+        evt.setSource(facade.getGlobal());
+        evt.setPropertyNames(changed);
+        evt.setNewValues(newValues);
+        evt.setOldValues(oldValues);
         
-        for ( ConfigurationListener l : getListeners() ) {
-            try {
-                l.handleGlobalChange( global, changed, oldValues, newValues);
-            }
-            catch( Exception e ) {
-                LOGGER.log(Level.SEVERE, "Error occurred processing a configuration change listener", e);
-            }
-        }
+        event(evt);
     }
 
     public void fireLoggingModified(LoggingInfo logging, List<String> changed, List oldValues, 
             List newValues) {
-            
-        for ( ConfigurationListener l : getListeners() ) {
-            try {
-                l.handleLoggingChange( logging, changed, oldValues, newValues);
-            }
-            catch( Exception e ) {
-                LOGGER.log(Level.SEVERE, "Error occurred processing a configuration change listener", e);
-            }
-        }
+        ConfigModifyEventImpl<LoggingInfo> evt = new ConfigModifyEventImpl<LoggingInfo>();
+        evt.setSource(logging);
+        evt.setPropertyNames(changed);
+        evt.setNewValues(newValues);
+        evt.setOldValues(oldValues);
+        event(evt);
     }
     
     void fireLoggingPostModified() {
-        for ( ConfigurationListener l : listeners ) {
-            try {
-                l.handlePostLoggingChange( facade.getLogging() );
-            }
-            catch( Exception e ) {
-                LOGGER.log(Level.SEVERE, "Error occurred processing a configuration change listener", e);
-            }
-        }
+        ConfigModifyEventImpl<LoggingInfo> evt = new ConfigModifyEventImpl<LoggingInfo>();
+        evt.setSource(facade.getLogging());
+        
+        event(evt);
     }
     
     public void save(ServiceInfo service) {
@@ -368,48 +356,37 @@ public class GeoServerImpl implements GeoServer, ApplicationContextAware {
 
     public void fireServiceModified(ServiceInfo service, List<String> changed, List oldValues, 
             List newValues) {
-            
-        for ( ConfigurationListener l : getListeners() ) {
-            try {
-                l.handleServiceChange( service, changed, oldValues, newValues);
-            }
-            catch( Exception e ) {
-                LOGGER.log(Level.SEVERE, "Error occurred processing a configuration change listener", e);
-            }
-        }
+        ConfigModifyEventImpl<ServiceInfo> evt = new ConfigModifyEventImpl<ServiceInfo>();
+        evt.setSource(service);
+        evt.setPropertyNames(changed);
+        evt.setNewValues(newValues);
+        evt.setOldValues(oldValues);
+        
+        event(evt);
     }
     
     void firePostServiceModified(ServiceInfo service) {
-        for ( ConfigurationListener l : listeners ) {
-            try {
-                l.handlePostServiceChange( service );
-            }
-            catch( Exception e ) {
-                LOGGER.log(Level.SEVERE, "Error occurred processing a configuration change listener", e);
-            }
-        }
+        ConfigPostModifyEventImpl<ServiceInfo> evt = new ConfigPostModifyEventImpl<ServiceInfo>();
+        evt.setSource(service);
+        event(evt);
     }
 
     void fireServiceRemoved(ServiceInfo service) {
-        for ( ConfigurationListener l : getListeners() ) {
-            try {
-                l.handleServiceRemove(service);
-            }
-            catch( Exception e ) {
-                LOGGER.log(Level.SEVERE, "Error occurred processing a configuration change listener", e);
-            }
-        }
+        ConfigRemoveEventImpl<ServiceInfo> evt = new ConfigRemoveEventImpl<ServiceInfo>();
+        evt.setSource(service);
+        event(evt);
     }
     public void addListener(ConfigurationListener listener) {
-        listeners.add( listener );
+        listeners.add(new ConfigurationListenerWrapper(listener));
     }
     
     public void removeListener(ConfigurationListener listener) {
-        listeners.remove( listener );
+        listeners.remove( new ConfigurationListenerWrapper(listener) );
     }
     
     public Collection<ConfigurationListener> getListeners() {
-        return listeners;
+        return null;
+        // FIXME Need to make this backward compatible
     }
     
     public void dispose() {
@@ -465,4 +442,80 @@ public class GeoServerImpl implements GeoServer, ApplicationContextAware {
             }
         }
     }
+    
+    protected void event(ConfigEvent<?> event) {
+        Exception toThrow = null;
+        
+        if(event.getSource()==null) {
+            throw new NullPointerException("A ConfigEvent must have a source to be fired.");
+        }
+        ConfigInfo source = event.getSource();
+        
+        final String handle="handle";
+        String noun=null;
+        String verb=null;
+        Class<?> clazz=null;
+        
+        // Constucting the method name this way is a lot neater and less repetitive.
+        
+        if (source instanceof ServiceInfo){
+            noun="Service";
+        } else if (source instanceof SettingsInfo) {
+            noun="Settings";
+        } else if (source instanceof LoggingInfo) {
+            noun="Logging";
+        } else if (source instanceof GeoServerInfo) {
+            noun="Global";
+        }
+        
+        if (event instanceof ConfigAddEvent) {
+            verb="Add";
+            clazz=ConfigAddEvent.class;
+        } else if(event instanceof ConfigRemoveEvent) {
+            verb="Remove";
+            clazz=ConfigRemoveEvent.class;
+        } else if(event instanceof ConfigModifyEvent) {
+            verb="Modify";
+            clazz=ConfigModifyEvent.class;
+        } else if(event instanceof ConfigPostModifyEvent) {
+            verb="PostModify";
+            clazz=ConfigPostModifyEvent.class;
+        }
+        if(noun==null||verb==null||clazz==null) {
+            throw new UnsupportedOperationException("Unknown ConfigInfo ("+source.getClass().getName()+") or ConfigEvent ("+event.getClass().getName()+")");
+        }
+        
+        Method listenerMethod;
+        try {
+            listenerMethod = ConfigListener.class.getMethod(handle+noun+verb, clazz);
+        } catch (SecurityException e) {
+            throw new IllegalStateException(e);
+        } catch (NoSuchMethodException e) {
+            throw new UnsupportedOperationException("ConfigListener inteface does not support the event: "+noun+verb);
+        }
+        
+        for (ConfigListener listener: listeners) {
+            try {
+                listenerMethod.invoke(listener, event);
+            } catch(Throwable t) {
+                LOGGER.log(Level.WARNING, "Catalog listener threw exception handling event.", t);
+            }
+        }
+    }
+
+    @Override
+    public void addListener(ConfigListener listener) {
+        listeners.add(listener);
+    }
+
+    @Override
+    public void removeListener(ConfigListener listener) {
+        listeners.remove(listener);
+    }
+
+    @Override
+    public Collection<ConfigListener> getConfigListeners() {
+        return listeners;
+    }
+
 }
