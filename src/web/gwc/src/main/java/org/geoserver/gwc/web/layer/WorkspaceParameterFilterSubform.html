@@ -1,0 +1,14 @@
+<html xmlns:wicket="http://wicket.apache.org/">
+<head></head>
+<body>
+<wicket:panel>
+  <div style="display:inline-block; vertical-align:top; margin:0.5em;">
+    <label><wicket:message key="defaultWorkspace">Default Workspace</wicket:message></label>
+    <select wicket:id="defaultValue" />
+  </div><div style="display:inline-block; vertical-align:top; margin:0.5em;">
+    <label><wicket:message key="alternateWorkspaces">Alternate Workspaces</wicket:message></label>
+    <ul wicket:id="workspaces" class="choiceList"></ul>
+  </div>
+</wicket:panel>
+</body>
+</html>

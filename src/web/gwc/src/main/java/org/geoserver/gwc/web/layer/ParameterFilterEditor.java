@@ -44,7 +44,9 @@ import org.geoserver.catalog.CatalogInfo;
 import org.geoserver.catalog.LayerInfo;
 import org.geoserver.gwc.GWC;
 import org.geoserver.gwc.layer.StyleParameterFilter;
+import org.geoserver.gwc.layer.WorkspaceParameterFilter;
 import org.geoserver.gwc.web.GWCIconFactory;
+import org.geoserver.web.GeoServerApplication;
 import org.geoserver.web.wicket.GeoServerAjaxFormLink;
 import org.geoserver.web.wicket.Icon;
 import org.geoserver.web.wicket.ImageAjaxLink;
@@ -238,6 +240,24 @@ class ParameterFilterEditor extends FormComponentPanel<Set<ParameterFilter>> {
         };
         addStyleFilterLink.add(new Icon("addIcon", GWCIconFactory.ADD_ICON));
         add(addStyleFilterLink);
+        GeoServerAjaxFormLink addWorkspaceFilterLink = new GeoServerAjaxFormLink("addWorkspaceFilter") {
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            protected void onClick(AjaxRequestTarget target, Form form) {
+                WorkspaceParameterFilter newFilter = new WorkspaceParameterFilter();
+                List<String> workspaces = new ArrayList<String>(2);
+                workspaces.add(GeoServerApplication.get().getCatalog().getDefaultWorkspace().getName());
+                workspaces.add(((LayerInfo)layerModel.getObject()).getResource().getStore().getWorkspace().getName());
+                newFilter.setLayer(workspaces);
+                
+                addFilter(newFilter);
+
+                target.addComponent(container);
+            }
+        };
+        addWorkspaceFilterLink.add(new Icon("addIcon", GWCIconFactory.ADD_ICON));
+        add(addWorkspaceFilterLink);
         
         // FIXME: make this extensible so new kinds of filter can be supported by
         ArrayList<Class<? extends ParameterFilter>> filterTypes =
@@ -350,6 +370,9 @@ class ParameterFilterEditor extends FormComponentPanel<Set<ParameterFilter>> {
         }
         if (model.getObject() instanceof FloatParameterFilter) {
             return new FloatParameterFilterSubform(id, (IModel<FloatParameterFilter>) model);
+        }
+        if (model.getObject() instanceof WorkspaceParameterFilter) {
+            return new WorkspaceParameterFilterSubform(id, (IModel<WorkspaceParameterFilter>) model);
         }
         return new DefaultParameterFilterSubform(id, (IModel<ParameterFilter>) model);
     }

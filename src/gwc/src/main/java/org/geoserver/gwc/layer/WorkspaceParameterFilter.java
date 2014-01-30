@@ -19,6 +19,7 @@ import javax.annotation.Nullable;
 import org.geoserver.catalog.LayerInfo;
 import org.geoserver.catalog.StyleInfo;
 import org.geoserver.catalog.WorkspaceInfo;
+import org.geoserver.gwc.GWC;
 import org.geotools.util.logging.Logging;
 import org.geowebcache.filter.parameters.ParameterException;
 import org.geowebcache.filter.parameters.ParameterFilter;
@@ -33,19 +34,18 @@ import static com.google.common.base.Preconditions.*;
  * ParameterFilter which allows the workspace of the back end to be specified. Maintains a set 
  * of allowed workspaces which are intersected with those available on the layer.
  * 
- * @author Kevin Smith, OpenGeo
+ * @author Kevin Smith, Boundless
  *
  */
 @XStreamAlias("workspaceParameterFilter")
 public class WorkspaceParameterFilter extends ParameterFilter {
 
     private static final Logger LOGGER = Logging.getLogger(GeoServerTileLayerInfoImpl.class);
+    
+    boolean global;
+    boolean local;
+    String localName;
 
-    private Set<String> allowedWorkspaces;
-    
-    // The following two fields are omitted from REST
-    private Set<String> availableWorkspaces;
-    
     /** serialVersionUID */
     private static final long serialVersionUID = 1L;
     
@@ -54,11 +54,11 @@ public class WorkspaceParameterFilter extends ParameterFilter {
      * Check that setLayer has been called
      */
     protected void checkInitialized(){
-        checkState(availableWorkspaces!=null, "Current workspaces not available.");
+        checkState(localName!=null, "Current workspaces not available.");
     }
     
     public WorkspaceParameterFilter(){
-        super("WORKSPACE");
+        super(GWC.WORKSPACE_PARAM);
     }
     
     @Override
@@ -70,14 +70,13 @@ public class WorkspaceParameterFilter extends ParameterFilter {
     @Override
     public boolean applies(String parameterValue) {
         checkInitialized();
-        return parameterValue==null || getLegalValues().contains(parameterValue);
+        return parameterValue==null || parameterValue.isEmpty() || getLegalValues().equals(localName);
     }
 
     @Override
     public String apply(String str) throws ParameterException {
         checkInitialized();
-        if(str == null || str.isEmpty()) {
-            // Use the default
+        if(str == null) {
             return getDefaultValue();
         } else {
             for(String value: getLegalValues()){
