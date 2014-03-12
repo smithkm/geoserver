@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.geoserver.catalog.impl.AdvertisedFunction;
 import org.geotools.filter.Capabilities;
 import org.geotools.filter.LikeFilterImpl;
 import org.opengis.filter.And;
@@ -86,6 +87,8 @@ public class FilterToCatalogSQL implements FilterVisitor, ExpressionVisitor {
         builder.addType(PropertyIsNil.class);// whether the property exists AND it's value is null
         builder.addType(And.class);
         builder.addType(Or.class);
+        
+        builder.addType(AdvertisedFunction.class);
 
         CAPABILITIES = builder.getContents();
     }
@@ -340,6 +343,25 @@ public class FilterToCatalogSQL implements FilterVisitor, ExpressionVisitor {
         propertyTypesParam = newParam("ptype", propTypeIds);
         return propertyTypesParam;
     }
+    
+    private String propertyTypesParam(final String propertyName) {
+
+        final String propertyTypesParam;
+        final Set<PropertyType> propertyTypes;
+
+        propertyTypes = dbMappings.getPropertyTypes(queryType, propertyName);
+
+        Preconditions.checkState(!propertyTypes.isEmpty(), "Found no mapping for property '"
+                + propertyName + "' of type " + queryType.getName());
+
+        List<Integer> propTypeIds = new ArrayList<Integer>(propertyTypes.size());
+        for (PropertyType pt : propertyTypes) {
+            Integer propertyTypeId = pt.getOid();
+            propTypeIds.add(propertyTypeId);
+        }
+        propertyTypesParam = newParam("ptype", propTypeIds);
+        return propertyTypesParam;
+    }
 
     /**
      * @param string
@@ -522,6 +544,24 @@ public class FilterToCatalogSQL implements FilterVisitor, ExpressionVisitor {
         StringBuilder builder = append(extraData,
                 "oid IN (select oid from object_property where property_type in (:",
                 propertyTypesParam, ") and value IS NULL) /* ", filter.toString(), " */ \n");
+        return builder;
+    }
+    
+    /**
+     * @param filter
+     * @param extraData
+     * @return
+     */
+    public Object visit(AdvertisedFunction filter, Object extraData) {
+        final String enabled = propertyTypesParam("enabled");
+        final String advertised = propertyTypesParam("advertised");
+        StringBuilder builder = append(extraData,
+                "oid IN (SELECT o.oid FROM object_property o WHERE ",
+                "AND o.property_type IN (:", enabled, ") ",
+                "AND o.value ) AND oid IN (SELECT o.oid FROM object_property o WHERE ",
+                "AND o.property_type IN (:", advertised, ") ",
+                "AND o.value ) /* ", filter.toString(),
+                " */ \n");
         return builder;
     }
 

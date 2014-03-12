@@ -11,7 +11,9 @@ import java.util.List;
 import org.apache.wicket.model.IModel;
 import org.geoserver.catalog.LayerGroupInfo;
 import org.geoserver.catalog.LayerInfo;
+import org.geoserver.catalog.Predicates;
 import org.geoserver.web.wicket.GeoServerDataProvider;
+import org.opengis.filter.Filter;
 
 /**
  * Provides a filtered, sorted view over the catalog layers.
@@ -35,7 +37,11 @@ public class PreviewLayerProvider extends GeoServerDataProvider<PreviewLayer> {
             return null;
         }
     };
-
+    
+    public static final Filter ADVERTISED = Predicates.and(
+                Predicates.equal("advertised", true), 
+                Predicates.equal("enabled", true));
+    
     public static final Property<PreviewLayer> TITLE = new BeanProperty<PreviewLayer>(
             "title", "title");
     

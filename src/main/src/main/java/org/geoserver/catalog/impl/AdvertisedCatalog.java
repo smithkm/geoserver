@@ -19,12 +19,15 @@ import org.geoserver.catalog.ResourceInfo;
 import org.geoserver.catalog.StoreInfo;
 import org.geoserver.catalog.StyleInfo;
 import org.geoserver.catalog.WorkspaceInfo;
+import org.geoserver.catalog.util.CloseableIterator;
 import org.geoserver.ows.Dispatcher;
 import org.geoserver.ows.Request;
 import org.geoserver.security.decorators.DecoratingLayerGroupInfo;
 import org.geotools.filter.expression.InternalVolatileFunction;
 import org.opengis.filter.Filter;
 import org.opengis.filter.FilterFactory;
+
+import com.google.common.collect.Lists;
 
 
 /**
@@ -183,28 +186,15 @@ public class AdvertisedCatalog extends AbstractFilteredCatalog {
             // these kind of objects are not secured
             return filter;
         }
-
-        org.opengis.filter.expression.Function visible = new InternalVolatileFunction() {
-            /**
-             * Returns {@code false} if the catalog info shall be hidden, {@code true} otherwise.
-             */
-            @Override
-            public Boolean evaluate(Object info) {
-                if (info instanceof ResourceInfo) {
-                    return !hideResource((ResourceInfo) info);
-                } else if (info instanceof LayerInfo) {
-                    return !hideLayer((LayerInfo) info);
-                } else if (info instanceof LayerGroupInfo) {
-                    return checkAccess((LayerGroupInfo) info) != null;
-                } else {
-                    throw new IllegalArgumentException("Can't build filter for objects of type "
-                            + info.getClass().getName());
-                }                
-            }
-        };
+        if (!isOgcCapabilitiesRequest()) {
+            return filter;
+        }
 
         FilterFactory factory = Predicates.factory;
-
+        
+        // FIXME probably shouldn't be instantiating the Function directly
+        org.opengis.filter.expression.Function visible = new AdvertisedFunction(); //factory.function("advertised");
+        
         // create a filter combined with the security credentials check
         Filter securityFilter = factory.equals(factory.literal(Boolean.TRUE), visible);
         return Predicates.and(filter, securityFilter);
@@ -248,5 +238,15 @@ public class AdvertisedCatalog extends AbstractFilteredCatalog {
     @Override
     protected <T extends WorkspaceInfo> List<T> filterWorkspaces(List<T> workspaces) {
         return workspaces;
+    }
+    
+    @Override
+    public List<LayerInfo> getLayers() {
+        CloseableIterator<LayerInfo> it = delegate.list(LayerInfo.class, securityFilter(LayerInfo.class, Predicates.acceptAll()));
+        try {
+            return filterLayers(Lists.newArrayList(it));
+        } finally {
+            it.close();
+        }
     }
 }
