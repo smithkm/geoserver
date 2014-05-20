@@ -4,16 +4,13 @@
  */
 package org.geoserver.config;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.MalformedURLException;
 import java.net.URI;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.apache.commons.io.IOUtils;
@@ -39,12 +36,7 @@ import org.geoserver.catalog.event.CatalogPostModifyEvent;
 import org.geoserver.catalog.event.CatalogRemoveEvent;
 import org.geoserver.config.util.XStreamPersister;
 import org.geoserver.platform.GeoServerResourceLoader;
-import org.geoserver.platform.resource.Files;
 import org.geoserver.platform.resource.Resource;
-import org.geoserver.platform.resource.Resource.Type;
-import org.geotools.styling.AbstractStyleVisitor;
-import org.geotools.styling.ExternalGraphic;
-import org.geotools.styling.Style;
 import org.geotools.util.logging.Logging;
 
 import static org.geoserver.data.util.IOUtils.xStreamPersist;
@@ -164,7 +156,7 @@ public class GeoServerPersister implements CatalogListener, ConfigurationListene
 
                     //look for any resource files (image, etc...) and copy them over, don't move 
                     // since they could be shared among other styles
-                    for (Resource old : additionalResources((StyleInfo) source)) {
+                    for (Resource old : dd.additionalStyleResources((StyleInfo) source)) {
                         copyResToDir(old, newDir);
                     }
 
@@ -612,43 +604,6 @@ public class GeoServerPersister implements CatalogListener, ConfigurationListene
         return list;
     }
     
-    /*
-     * returns additional resource files 
-     */
-    private List<Resource> additionalResources(StyleInfo s) throws IOException {
-        final List<Resource> files = new ArrayList<Resource>();
-        final Resource baseDir = dd.get(s);
-        try {
-            Style parsedStyle = dd.parsedStyle(s);
-            parsedStyle.accept(new AbstractStyleVisitor() {
-                @Override
-                public void visit(ExternalGraphic exgr) {
-                    if (exgr.getOnlineResource() == null) {
-                        return;
-                    }
-    
-                    URI uri = exgr.getOnlineResource().getLinkage();
-                    if (uri == null) {
-                        return;
-                    }
-                    
-    
-                    Resource r = null;
-                    try {
-                        r = uriToResource(baseDir, uri);
-                        if (r!=null && r.getType()!=Type.UNDEFINED) files.add(r);
-                    } catch (IllegalArgumentException|MalformedURLException e) {
-                        LOGGER.log(Level.WARNING, "Error attemping to process SLD resource", e);
-                    } 
-                }
-            });
-        }
-        catch(IOException e) {
-            LOGGER.log(Level.WARNING, "Error loading style", e);
-        }
-        return files;
-    }
-
     //layer groups
     private void addLayerGroup( LayerGroupInfo lg ) throws IOException {
         LOGGER.fine( "Persisting layer group " + lg.getName() );
@@ -710,16 +665,5 @@ public class GeoServerPersister implements CatalogListener, ConfigurationListene
         r.parent().dir();
     }
     
-    private Resource uriToResource(Resource base, URI uri) throws MalformedURLException {
-        if(uri.getScheme()!=null && !uri.getScheme().equals("file")) {
-            return null;
-        }
-        if(uri.isAbsolute() && ! uri.isOpaque()) {
-            assert uri.getScheme().equals("file");
-            return Files.asResource(new File(uri.toURL().getFile()));
-        }  else {
-            return base.get(uri.getSchemeSpecificPart());
-        }
-    }
 
 }

@@ -674,6 +674,7 @@ public class GeoServerPersisterTest extends GeoServerSystemTestSupport {
         assertFalse(new File( testData.getDataDirectoryRoot(), "workspaces/gs"+target.getPath()).exists());
         assertFalse(new File( testData.getDataDirectoryRoot(), "workspaces/gs/styles"+target.getPath()).exists());
         assertTrue(new File( testData.getDataDirectoryRoot(), "workspaces/gs/styles/burg02.svg").exists());
+        target.delete();
     }
     @Test
     public void testModifyStyleWithResourcesRemoteChangeWorkspace() throws Exception {
@@ -702,6 +703,7 @@ public class GeoServerPersisterTest extends GeoServerSystemTestSupport {
         assertFalse(new File( testData.getDataDirectoryRoot(), "styles/foostyle.xml").exists());
         assertFalse(new File(testData.getDataDirectoryRoot(), "styles/foostyle.sld").exists());
         assertTrue(new File( testData.getDataDirectoryRoot(), "styles/burg02.svg").exists());
+        assertFalse(new File( testData.getDataDirectoryRoot(), "burg03.svg").exists());
         
         assertTrue(new File( testData.getDataDirectoryRoot(), "workspaces/gs/styles/foostyle.xml").exists());
         assertTrue(new File( testData.getDataDirectoryRoot(), "workspaces/gs/styles/foostyle.sld").exists());
