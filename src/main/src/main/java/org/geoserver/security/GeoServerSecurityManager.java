@@ -181,7 +181,7 @@ import com.thoughtworks.xstream.mapper.Mapper;
  *
  */
 public class GeoServerSecurityManager extends ProviderManager implements ApplicationContextAware, 
-    ApplicationListener, ResourceStore {
+    ApplicationListener<ApplicationEvent>, ResourceStore {
 
     static Logger LOGGER = Logging.getLogger("org.geoserver.security");
 
@@ -674,7 +674,7 @@ public class GeoServerSecurityManager extends ProviderManager implements Applica
      * @deprecated Use {@link #secuirtyRoot()}
      */
     public File getSecurityRoot() throws IOException {
-        Resource directory = get("security");
+        Resource directory = dataDir.getSecurity();
         return directory.dir();
     }
 

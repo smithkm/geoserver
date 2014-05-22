@@ -237,9 +237,11 @@ public class GeoServerDataDirectory implements ResourceStore {
      * <p>
      * This directory is called 'security', and is located directly under {@link #root()}
      * </p>
+     * @deprecated As of GeoServer 2.6, replaced by @link {@link #getSecurity()}
      */
+    @Deprecated
     public File findSecurityRoot() throws IOException {
-        Resource directory = get("security");
+        Resource directory = getSecurity();
         return Resources.directory(directory);
     }
 
@@ -248,39 +250,31 @@ public class GeoServerDataDirectory implements ResourceStore {
      * <p>
      * This directory is called 'security', and is located directly under {@link #root()}
      * </p>
+     * @deprecated As of GeoServer 2.6, replaced by @link {@link #getSecurity()}
      */
+    @Deprecated
     public File findOrCreateSecurityRoot() throws IOException {
-        Resource direcrtory = get("security");
+        Resource direcrtory = getSecurity();
         return direcrtory.dir(); // will create directory as needed
     }
 
     /**
-     * Access to security directory.
-     * 
-     * @Unused
-     */
-    private File securityRoot(boolean create) throws IOException {
-        Resource directory = get("security");
-        if (create) {
-            return directory.dir();
-        } else {
-            return Resources.directory(directory);
-        }
-    }
-
-    /**
      * Returns a directory under the {@link #securityRoot()} directory, if the directory does not exist null will be returned.
+     * @deprecated As of GeoServer 2.6, replaced by @link {@link #getSecurity(String...)}
      */
+    @Deprecated
     public File findSecurityDir(String... location) throws IOException {
-        Resource resource = get(Paths.path("security", Paths.path(location)));
+        Resource resource = getSecurity(location);
         return Resources.directory(resource);
     }
 
     /**
      * Returns a directory under the {@link #securityRoot()} directory, if the directory does not exist it will be created.
+     * @deprecated As of GeoServer 2.6, replaced by @link {@link #getSecurity(String...)}
      */
+    @Deprecated
     public File findOrCreateSecurityDir(String... location) throws IOException {
-        Resource resource = get(Paths.path("security", Paths.path(location)));
+        Resource resource = getSecurity(location);
         return resource.dir();
     }
 
@@ -288,11 +282,12 @@ public class GeoServerDataDirectory implements ResourceStore {
      * Copies a file into a security configuration directory.
      * <p>
      * If the security configuration directory does exist it will be created.
+     * @deprecated As of GeoServer 2.6, replaced by @link {@link #getSecurity(String...)}
      * </p>
      */
     @Deprecated
     public void copyToSecurityDir(File f) throws IOException {
-        Resource resource = get("security");
+        Resource resource = getSecurity();
         Resources.copy(f, resource);
     }
 
@@ -300,11 +295,12 @@ public class GeoServerDataDirectory implements ResourceStore {
      * Copies data into a security configuration directory.
      * <p>
      * If the security configuration directory does exist it will be created
+     * @deprecated As of GeoServer 2.6, replaced by @link {@link #getSecurity(String...)}
      * </p>
      */
     @Deprecated
     public void copyToSecurityDir(InputStream data, String filename) throws IOException {
-        Resource resource = get("security");
+        Resource resource = getSecurity();
         Resources.copy(data, resource, filename);
     }
 
@@ -780,6 +776,7 @@ public class GeoServerDataDirectory implements ResourceStore {
     static final String WORKSPACE_DIR = "workspaces";
     static final String LAYERGROUP_DIR = "layergroups";
     static final String STYLE_DIR = "styles";
+    static final String SECURITY_DIR = "security";
 
     
     /**
@@ -789,6 +786,17 @@ public class GeoServerDataDirectory implements ResourceStore {
      */
     public @Nonnull Resource getRoot(String... path) {
         Resource r = get(Paths.path(path));
+        assert r!=null;
+        return r;
+    }
+
+    /**
+     * Retrieve a resource relative to the security directory. An empty path will retrieve
+     * the directory itself.
+     * @return A {@link Resource}
+     */
+    public @Nonnull Resource getSecurity(String... path) {
+        Resource r = get(Paths.path( SECURITY_DIR, Paths.path(path)));
         assert r!=null;
         return r;
     }
