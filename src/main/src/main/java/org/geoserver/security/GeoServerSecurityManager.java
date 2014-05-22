@@ -665,7 +665,7 @@ public class GeoServerSecurityManager extends ProviderManager implements Applica
      * Security configuration root directory.
      */
     public Resource security() {
-        return get("security");
+        return dataDir.getSecurity();
     }
     
     /**
@@ -674,8 +674,7 @@ public class GeoServerSecurityManager extends ProviderManager implements Applica
      * @deprecated Use {@link #secuirtyRoot()}
      */
     public File getSecurityRoot() throws IOException {
-        Resource directory = dataDir.getSecurity();
-        return directory.dir();
+        return security().dir();
     }
 
     /**
