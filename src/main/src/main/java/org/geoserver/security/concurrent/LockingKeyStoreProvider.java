@@ -15,6 +15,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import javax.crypto.SecretKey;
 
+import org.geoserver.platform.resource.Resource;
 import org.geoserver.security.GeoServerSecurityManager;
 import org.geoserver.security.KeyStoreProvider;
 
@@ -245,5 +246,10 @@ public class LockingKeyStoreProvider implements KeyStoreProvider {
         } finally {
             writeUnLock();
         }        
-    }    
+    }
+
+    @Override
+    public Resource getResource() {
+        return provider.getResource();
+    }
 }

@@ -13,6 +13,7 @@ import java.security.PublicKey;
 
 import javax.crypto.SecretKey;
 
+import org.geoserver.platform.resource.Resource;
 import org.geoserver.security.GeoServerSecurityManager;
 import org.geoserver.security.GeoServerUserGroupService;
 
@@ -25,8 +26,15 @@ public interface KeyStoreProvider {
 
     /**
      * @return the default key store {@link File} object
+     * @deprecated Since GeoServer 2.6.  Use {@link #getResource()}
      */
+    @Deprecated
     File getFile();
+    
+    /**
+     * @return the default key store {@link Resource} object
+     */
+    Resource getResource();
 
     /**
      * Forces a reload of the key store
