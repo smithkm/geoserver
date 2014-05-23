@@ -230,6 +230,18 @@ public class Resources {
     }
     
     /**
+     * Write the contents of a resource into another resource
+     * @param data resource to read
+     * @param destination resource to write to
+     * @throws IOException
+     */
+    public static void copy (Resource data, Resource destination) throws IOException {
+        try(InputStream in = data.in()) {
+            copy(in, destination);
+        }
+    }
+    
+    /**
      * Write the contents of a stream to a new Resource inside a directory
      * @param data data to write
      * @param directory parent directory to create the resource in
@@ -250,6 +262,23 @@ public class Resources {
         String filename = data.getName();
         try(InputStream in = new FileInputStream(data)) {
             copy(data, directory.get(filename));
+        }
+    }
+    
+    /**
+     * Renames a resource by reading it and writing to the new resource, then deleting the old one.
+     * This is not atomic.
+     * @param source
+     * @param destination
+     * @throws IOException
+     * @return true if successful, false if either the write or delete failed.
+     */
+    public static boolean renameByCopy(Resource source, Resource destination) {
+        try {
+            copy(source, destination);
+            return source.delete();
+        } catch (IOException e) {
+            return false;
         }
     }
 }
