@@ -73,8 +73,9 @@ public final class Files {
         @Override
         public InputStream in() {
             try {
+                file.createNewFile();
                 return new FileInputStream(file);
-            } catch (FileNotFoundException e) {
+            } catch (IOException e) {
                 throw new IllegalStateException(e);
             }
         }
@@ -115,7 +116,7 @@ public final class Files {
 
         @Override
         public List<Resource> list() {
-            return Collections.emptyList();
+            return null;
         }
 
         @Override
@@ -142,6 +143,31 @@ public final class Files {
             } else {
                 return Resources.renameByCopy(this, dest);
             }
+        }
+
+        @Override
+        public int hashCode() {
+            final int prime = 31;
+            int result = 1;
+            result = prime * result + ((file == null) ? 0 : file.hashCode());
+            return result;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj)
+                return true;
+            if (obj == null)
+                return false;
+            if (getClass() != obj.getClass())
+                return false;
+            ResourceAdaptor other = (ResourceAdaptor) obj;
+            if (file == null) {
+                if (other.file != null)
+                    return false;
+            } else if (!file.equals(other.file))
+                return false;
+            return true;
         }
 
     }
