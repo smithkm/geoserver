@@ -12,10 +12,16 @@ import static org.geoserver.platform.resource.ResourceMatchers.*;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
+
+import junit.framework.AssertionFailedError;
 
 import org.apache.commons.io.IOUtils;
 import org.geoserver.platform.resource.Resource;
@@ -453,26 +459,64 @@ public abstract class ResourceTheoryTest {
         assertThat(children, hasItem(child));
     }
     
+    class ThreadExceptionTester implements UncaughtExceptionHandler, AutoCloseable {
+        LinkedList<Throwable> thrownOrder = new LinkedList<>();
+        HashMap<Thread, Throwable> thrownByThread = new HashMap<>();
+        @Override
+        public void uncaughtException(Thread t, Throwable e) {
+            thrownOrder.add(e);
+            thrownByThread.put(t, e);
+        }
+        
+        public void close() throws Exception {
+            
+            if(!thrownOrder.isEmpty()) {
+                Throwable t = thrownOrder.peekFirst();
+                throw new AssertionError("Uncaught throw in thread", t);
+            }
+        }
+    }
     @Theory
-    public void theoryMultipleOutputStreamsAreSafe(String path) throws Exception {
+    public void theoryMultipleOutputStreamsAreSafe(String path) throws Throwable {
         final Resource res = getResource(path);
         assumeThat(res, is(resource()));
         
         
-        final byte[] thread1Content = "This is the content for thread 1".getBytes();
-        final byte[] thread2Content = "Thread 2 has this content".getBytes();
+        final byte[] thread1Content = "ABDC T1".getBytes();
+        final byte[] thread2Content = "EFGH T2".getBytes();
+        final long delay = 250;
         
-        
-        try(OutputStream out1 = res.out();
-            OutputStream out2 = res.out()) {
-            for(int i=0; i<thread1Content.length || i<thread2Content.length; i++) {
-                if(i<thread1Content.length) {
-                    out1.write(thread1Content[i]);
+        // Test uses sleep and actual threads in order to avoid making assumptions about how the
+        // implementation works
+        try(ThreadExceptionTester handler = new ThreadExceptionTester();) {
+            Thread thread = new Thread(new Runnable() {
+    
+                @Override
+                public void run() {
+                    try(OutputStream out = res.out()) {
+                        for(int i=0; i<thread2Content.length; i++) {
+                            Thread.sleep(delay);
+                            out.write(thread2Content[i]);
+                        }
+                    } catch (Throwable ex) {
+                        
+                    }
                 }
-                if(i<thread2Content.length) {
-                    out2.write(thread2Content[i]);
+                
+            });
+            thread.setUncaughtExceptionHandler(handler);
+            
+            thread.run();
+            
+            try(OutputStream out = res.out()) {
+                for(int i=0; i<thread1Content.length ; i++) {
+                    if(i<thread1Content.length) {
+                        Thread.sleep(delay);
+                        out.write(thread1Content[i]);
+                    }
                 }
             }
+            thread.join();
         }
         
         final byte[] resultContent;
