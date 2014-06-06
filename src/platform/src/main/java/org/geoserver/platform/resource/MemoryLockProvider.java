@@ -39,7 +39,7 @@ public class MemoryLockProvider implements LockProvider {
 
             boolean released = false;
 
-            public void release() {
+            public void close() {
                 if (!released) {
                     released = true;
                     locks[idx].unlock();

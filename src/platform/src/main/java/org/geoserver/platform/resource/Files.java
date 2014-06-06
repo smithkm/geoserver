@@ -57,7 +57,7 @@ public final class Files {
         @Override
         public Lock lock() {
             return new Lock() {
-                public void release() {
+                public void close() {
                 }
             };
         }

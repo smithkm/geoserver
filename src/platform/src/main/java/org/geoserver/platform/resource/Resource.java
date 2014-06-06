@@ -45,13 +45,13 @@ public interface Resource {
     /**
      * Token used to reserve resource for use.
      */
-    public interface Lock {
+    public interface Lock extends AutoCloseable {
         /**
          * Releases the lock on the specified key
          * 
          * @param lockKey
          */
-        public void release();
+        public void close();
     }
 
     /**

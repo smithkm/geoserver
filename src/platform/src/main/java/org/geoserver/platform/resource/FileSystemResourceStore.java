@@ -191,11 +191,11 @@ public class FileSystemResourceStore implements ResourceStore {
                     @Override
                     public void close() throws IOException {
                         super.close();
-                        lock.release();
+                        lock.close();
                     }
                 };
             } catch (FileNotFoundException e) {
-                lock.release();
+                lock.close();
                 throw new IllegalStateException("File not found " + actualFile, e);
             }
         }
@@ -226,13 +226,9 @@ public class FileSystemResourceStore implements ResourceStore {
                     @Override
                     public void close() throws IOException {
                         delegate.close();
-                        Lock lock = lock();
-                        try {
+                        try (Lock lock = lock()){
                             // no errors, overwrite the original file
                             Files.move(temp, actualFile);
-                        }
-                        finally {
-                            lock.release();
                         }
                     }
                 
@@ -274,13 +270,9 @@ public class FileSystemResourceStore implements ResourceStore {
                         }
                     }
                     if (parent.isDirectory()) {
-                        Lock lock = lock();
                         boolean created;
-                        try {
+                        try(Lock lock = lock()) {
                             created = file.createNewFile();
-                        }
-                        finally {
-                            lock.release();
                         }
                         if (!created) {
                             throw new FileNotFoundException("Unable to create "
@@ -314,13 +306,9 @@ public class FileSystemResourceStore implements ResourceStore {
                         }
                     }
                     if (parent.isDirectory()) {
-                        Lock lock = lock();
                         boolean created;
-                        try {
+                        try(Lock lock = lock()) {
                             created = file.mkdir();
-                        }
-                        finally {
-                            lock.release();
                         }
                         if (!created) {
                             throw new FileNotFoundException("Unable to create "

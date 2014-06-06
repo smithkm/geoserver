@@ -18,7 +18,7 @@ public class NullLockProvider implements LockProvider {
 
     public Resource.Lock acquire(final String lockKey) {
         return new Resource.Lock() {
-            public void release() {
+            public void close() {
                 // nothing to do
             }
             @Override

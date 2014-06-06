@@ -487,7 +487,7 @@ public abstract class ResourceTheoryTest {
         final long delay = 250;
         
         // Test uses sleep and actual threads in order to avoid making assumptions about how the
-        // implementation works
+        // implementation works (multiple buffers vs blocking)
         try(ThreadExceptionTester handler = new ThreadExceptionTester();) {
             Thread thread = new Thread(new Runnable() {
     
