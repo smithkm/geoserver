@@ -206,17 +206,12 @@ public class FileSystemResourceStore implements ResourceStore {
             if (!actualFile.exists()) {
                 throw new IllegalStateException("Cannot access " + actualFile);
             }
+            final Lock lock = this.lock(); // Released when the stream is closed
             try {
                 // first save to a temp file
                 final File temp;
                 synchronized(this) {
-                    File tryTemp;
-                    do {
-                        UUID uuid = UUID.randomUUID();
-                        tryTemp = new File(actualFile.getParentFile(), String.format("%s.%s.tmp", actualFile.getName(), uuid));
-                    } while(tryTemp.exists());
-                    
-                    temp = tryTemp;
+                    temp = new File(actualFile.getParentFile(), actualFile.getName()+".tmp");
                 }
                 // OutputStream wrapper used to write to a temporary file
                 // (and only lock during move to actualFile)
@@ -225,10 +220,12 @@ public class FileSystemResourceStore implements ResourceStore {
                 
                     @Override
                     public void close() throws IOException {
-                        delegate.close();
-                        try (Lock lock = lock()){
+                        try{
+                            delegate.close();
                             // no errors, overwrite the original file
                             Files.move(temp, actualFile);
+                        } finally {
+                            lock.close();
                         }
                     }
                 
@@ -253,6 +250,7 @@ public class FileSystemResourceStore implements ResourceStore {
                     }
                 };
             } catch (FileNotFoundException e) {
+                lock.close(); // Couldn't return the stream, so release the lock.
                 throw new IllegalStateException("Cannot access " + actualFile, e);
             }
         }
