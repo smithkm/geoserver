@@ -112,7 +112,7 @@ public class FileLockProvider implements LockProvider, ServletContextAware {
                     
                     boolean released;
 
-                    public void release() {
+                    public void close() {
                         if(released) {
                             return;
                         }
@@ -143,7 +143,7 @@ public class FileLockProvider implements LockProvider, ServletContextAware {
                                         + lockKey, e);
                             }
                         } finally {
-                            memoryLock.release();
+                            memoryLock.close();
                         }                        
                     }
                     
@@ -155,7 +155,7 @@ public class FileLockProvider implements LockProvider, ServletContextAware {
             } finally {
                 if (currLock != null) {
                     currLock.release();
-                    memoryLock.release();
+                    memoryLock.close();
                 }
                 IOUtils.closeQuietly(currFos);
                 file.delete();

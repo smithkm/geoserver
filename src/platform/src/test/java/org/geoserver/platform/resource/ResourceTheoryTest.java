@@ -12,13 +12,21 @@ import static org.geoserver.platform.resource.ResourceMatchers.*;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 
+import junit.framework.AssertionFailedError;
+
+import org.apache.commons.io.IOUtils;
 import org.geoserver.platform.resource.Resource;
 import org.geoserver.platform.resource.Resource.Type;
+import org.hamcrest.Matchers;
 import org.junit.Rule;
 import org.junit.experimental.theories.Theories;
 import org.junit.experimental.theories.Theory;
@@ -39,6 +47,19 @@ public abstract class ResourceTheoryTest {
     public ExpectedException exception = ExpectedException.none();
     
     protected abstract Resource getResource(String path) throws Exception;
+    
+    /**
+     * @return a resource that is not a data point of type DIRECTORY.
+     */
+    protected abstract Resource getDirectory();
+    /**
+     * @return a resource that is not a data point of type RESOURCE.
+     */
+    protected abstract Resource getResource();
+    /**
+     * @return a resource that is not a data point of type UNDEFINED.
+     */
+    protected abstract Resource getUndefined();
     
     @Theory
     public void theoryNotNull(String path) throws Exception {
@@ -272,6 +293,54 @@ public abstract class ResourceTheoryTest {
     }
     
     @Theory
+    public void theoryDeletedResourcesAreUndefined(String path) throws Exception {
+        Resource res = getResource(path);
+        assumeThat(res, resource());
+        
+        assertThat(res.delete(), is(true));
+        assertThat(res, undefined());
+    }
+    
+    @Theory
+    public void theoryUndefinedNotDeleted(String path) throws Exception {
+        Resource res = getResource(path);
+        assumeThat(res, undefined());
+        
+        assertThat(res.delete(), is(false));
+        assertThat(res, undefined());
+    }
+    @Theory
+    public void theoryRenamedAreUndefined(String path) throws Exception {
+        Resource res = getResource(path);
+        assumeThat(res, defined());
+        
+        Resource target = getUndefined();
+        assertThat(res.renameTo(target), is(true));
+        assertThat(res, undefined());
+    }
+    @Theory
+    public void theoryRenamedResourcesAreEquivalent(String path) throws Exception {
+        final Resource res = getResource(path);
+        assumeThat(res, resource());
+        
+        final byte[] expectedContent;
+        try(InputStream in = res.in()) {
+            expectedContent = IOUtils.toByteArray(in);
+        }
+        
+        final Resource target = getUndefined();
+        assertThat(res.renameTo(target), is(true));
+        assertThat(target, resource());
+        
+        final byte[] resultContent;
+        try(InputStream in = target.in()) {
+            resultContent = IOUtils.toByteArray(in);
+        }
+        
+        assertThat(resultContent, equalTo(expectedContent));
+    }
+   
+    @Theory
     public void theoryNonDirectoriesHaveFileWithSameContents(String path) throws Exception {
         Resource res = getResource(path);
         
@@ -388,5 +457,76 @@ public abstract class ResourceTheoryTest {
         assertThat(child, is(defined()));
         
         assertThat(children, hasItem(child));
+    }
+    
+    class ThreadExceptionTester implements UncaughtExceptionHandler, AutoCloseable {
+        LinkedList<Throwable> thrownOrder = new LinkedList<>();
+        HashMap<Thread, Throwable> thrownByThread = new HashMap<>();
+        @Override
+        public void uncaughtException(Thread t, Throwable e) {
+            thrownOrder.add(e);
+            thrownByThread.put(t, e);
+        }
+        
+        public void close() throws Exception {
+            
+            if(!thrownOrder.isEmpty()) {
+                Throwable t = thrownOrder.peekFirst();
+                throw new AssertionError("Uncaught throw in thread", t);
+            }
+        }
+    }
+    @Theory
+    public void theoryMultipleOutputStreamsAreSafe(String path) throws Throwable {
+        final Resource res = getResource(path);
+        assumeThat(res, is(resource()));
+        
+        
+        final byte[] thread1Content = "ABDC T1".getBytes();
+        final byte[] thread2Content = "EFGH T2".getBytes();
+        final long delay = 250;
+        
+        // Test uses sleep and actual threads in order to avoid making assumptions about how the
+        // implementation works (multiple buffers vs blocking)
+        try(ThreadExceptionTester handler = new ThreadExceptionTester();) {
+            Thread thread = new Thread(new Runnable() {
+    
+                @Override
+                public void run() {
+                    try(OutputStream out = res.out()) {
+                        for(int i=0; i<thread2Content.length; i++) {
+                            Thread.sleep(delay);
+                            out.write(thread2Content[i]);
+                        }
+                    } catch (Throwable ex) {
+                        
+                    }
+                }
+                
+            });
+            thread.setUncaughtExceptionHandler(handler);
+            
+            thread.run();
+            
+            try(OutputStream out = res.out()) {
+                for(int i=0; i<thread1Content.length ; i++) {
+                    if(i<thread1Content.length) {
+                        Thread.sleep(delay);
+                        out.write(thread1Content[i]);
+                    }
+                }
+            }
+            thread.join();
+        }
+        
+        final byte[] resultContent;
+        try(InputStream in = res.in()) {
+            resultContent = IOUtils.toByteArray(in);
+        }
+        
+        // 2 streams being written to concurrently should result in the resource containing 
+        // what was written to one of the two streams.
+        assertThat(resultContent, anyOf(equalTo(thread1Content), equalTo(thread2Content)));
+        
     }
 }

@@ -29,7 +29,7 @@ public class GeoServerLockProvider implements org.geowebcache.locks.LockProvider
             @Override
             public void release() throws GeoWebCacheException {
                 try {
-                    lock.release();
+                    lock.close();
                 } catch (IllegalArgumentException trouble) {
                     throw new GeoWebCacheException(trouble);
                 }

@@ -37,8 +37,8 @@ public final class Files {
      * This can be used to handle absolute file references that are not located
      * in the data directory.
      */
-    private static final class ResourceAdaptor implements Resource {
-        private final File file;
+    static final class ResourceAdaptor implements Resource {
+        final File file;
 
         private ResourceAdaptor(File file) {
             this.file = file;
@@ -57,7 +57,7 @@ public final class Files {
         @Override
         public Lock lock() {
             return new Lock() {
-                public void release() {
+                public void close() {
                 }
             };
         }
@@ -73,8 +73,9 @@ public final class Files {
         @Override
         public InputStream in() {
             try {
+                file.createNewFile();
                 return new FileInputStream(file);
-            } catch (FileNotFoundException e) {
+            } catch (IOException e) {
                 throw new IllegalStateException(e);
             }
         }
@@ -115,7 +116,7 @@ public final class Files {
 
         @Override
         public List<Resource> list() {
-            return Collections.emptyList();
+            return null;
         }
 
         @Override
@@ -127,6 +128,48 @@ public final class Files {
         public String toString() {
             return "ResourceAdaptor("+file+")";
         }
+
+        @Override
+        public boolean delete() {
+            return file.delete();
+        }
+
+        @Override
+        public boolean renameTo(Resource dest) {
+            if(dest instanceof FileSystemResourceStore.FileSystemResource) {
+                return file.renameTo(((FileSystemResourceStore.FileSystemResource)dest).file);
+            } else if(dest instanceof ResourceAdaptor) {
+                    return file.renameTo(((ResourceAdaptor)dest).file);
+            } else {
+                return Resources.renameByCopy(this, dest);
+            }
+        }
+
+        @Override
+        public int hashCode() {
+            final int prime = 31;
+            int result = 1;
+            result = prime * result + ((file == null) ? 0 : file.hashCode());
+            return result;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj)
+                return true;
+            if (obj == null)
+                return false;
+            if (getClass() != obj.getClass())
+                return false;
+            ResourceAdaptor other = (ResourceAdaptor) obj;
+            if (file == null) {
+                if (other.file != null)
+                    return false;
+            } else if (!file.equals(other.file))
+                return false;
+            return true;
+        }
+
     }
 
     private static final Logger LOGGER = Logging.getLogger(Files.class);

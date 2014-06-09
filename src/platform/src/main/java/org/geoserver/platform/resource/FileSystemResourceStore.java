@@ -13,6 +13,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Implementation of ResourceStore backed by the file system.
@@ -190,11 +191,11 @@ public class FileSystemResourceStore implements ResourceStore {
                     @Override
                     public void close() throws IOException {
                         super.close();
-                        lock.release();
+                        lock.close();
                     }
                 };
             } catch (FileNotFoundException e) {
-                lock.release();
+                lock.close();
                 throw new IllegalStateException("File not found " + actualFile, e);
             }
         }
@@ -205,12 +206,12 @@ public class FileSystemResourceStore implements ResourceStore {
             if (!actualFile.exists()) {
                 throw new IllegalStateException("Cannot access " + actualFile);
             }
+            final Lock lock = this.lock(); // Released when the stream is closed
             try {
                 // first save to a temp file
-                final File temp = new File(actualFile.getParentFile(), actualFile.getName() + ".tmp");
-                
-                if (temp.exists()) {
-                    temp.delete();
+                final File temp;
+                synchronized(this) {
+                    temp = new File(actualFile.getParentFile(), actualFile.getName()+".tmp");
                 }
                 // OutputStream wrapper used to write to a temporary file
                 // (and only lock during move to actualFile)
@@ -219,14 +220,12 @@ public class FileSystemResourceStore implements ResourceStore {
                 
                     @Override
                     public void close() throws IOException {
-                        delegate.close();
-                        Lock lock = lock();
-                        try {
+                        try{
+                            delegate.close();
                             // no errors, overwrite the original file
                             Files.move(temp, actualFile);
-                        }
-                        finally {
-                            lock.release();
+                        } finally {
+                            lock.close();
                         }
                     }
                 
@@ -251,6 +250,7 @@ public class FileSystemResourceStore implements ResourceStore {
                     }
                 };
             } catch (FileNotFoundException e) {
+                lock.close(); // Couldn't return the stream, so release the lock.
                 throw new IllegalStateException("Cannot access " + actualFile, e);
             }
         }
@@ -268,13 +268,9 @@ public class FileSystemResourceStore implements ResourceStore {
                         }
                     }
                     if (parent.isDirectory()) {
-                        Lock lock = lock();
                         boolean created;
-                        try {
+                        try(Lock lock = lock()) {
                             created = file.createNewFile();
-                        }
-                        finally {
-                            lock.release();
                         }
                         if (!created) {
                             throw new FileNotFoundException("Unable to create "
@@ -308,13 +304,9 @@ public class FileSystemResourceStore implements ResourceStore {
                         }
                     }
                     if (parent.isDirectory()) {
-                        Lock lock = lock();
                         boolean created;
-                        try {
+                        try(Lock lock = lock()) {
                             created = file.mkdir();
-                        }
-                        finally {
-                            lock.release();
                         }
                         if (!created) {
                             throw new FileNotFoundException("Unable to create "
@@ -417,6 +409,22 @@ public class FileSystemResourceStore implements ResourceStore {
         @Override
         public String toString() {
             return file.getAbsolutePath();
+        }
+
+        @Override
+        public boolean delete() {
+            return file.delete();
+        }
+
+        @Override
+        public boolean renameTo(Resource dest) {
+            if(dest instanceof FileSystemResource) {
+                return file.renameTo(((FileSystemResource)dest).file);
+            } else if(dest instanceof Files.ResourceAdaptor) {
+                    return file.renameTo(((Files.ResourceAdaptor)dest).file);
+            } else {
+                return Resources.renameByCopy(this, dest);
+            }
         }
 
     }
