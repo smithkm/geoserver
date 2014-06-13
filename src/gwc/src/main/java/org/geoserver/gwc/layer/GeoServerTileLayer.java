@@ -111,6 +111,7 @@ public class GeoServerTileLayer extends TileLayer implements ProxyLayer {
         this.layerInfo = null;
         this.layerGroupInfo = layerGroup;
         this.info = TileLayerInfoUtil.loadOrCreate(layerGroup, configDefaults);
+        initParameterFilters();
     }
 
     public GeoServerTileLayer(final LayerInfo layerInfo, final GWCConfig configDefaults,
@@ -123,6 +124,7 @@ public class GeoServerTileLayer extends TileLayer implements ProxyLayer {
         this.layerInfo = layerInfo;
         this.layerGroupInfo = null;
         this.info = TileLayerInfoUtil.loadOrCreate(layerInfo, configDefaults);
+        initParameterFilters();
     }
 
     public GeoServerTileLayer(final LayerGroupInfo layerGroup, final GridSetBroker gridsets,
@@ -135,6 +137,7 @@ public class GeoServerTileLayer extends TileLayer implements ProxyLayer {
         this.layerInfo = null;
         this.layerGroupInfo = layerGroup;
         this.info = state;
+        initParameterFilters();
         TileLayerInfoUtil.checkAutomaticStyles(layerGroup, state);
     }
 
@@ -148,7 +151,16 @@ public class GeoServerTileLayer extends TileLayer implements ProxyLayer {
         this.layerInfo = layerInfo;
         this.layerGroupInfo = null;
         this.info = state;
+        initParameterFilters();
         TileLayerInfoUtil.checkAutomaticStyles(layerInfo, state);
+    }
+    
+    protected void initParameterFilters() {
+        for(ParameterFilter filter:info.getParameterFilters()) {
+            if (filter instanceof GeoServerParameterFilter) {
+                ((GeoServerParameterFilter) filter).setLayer(this);
+            }
+        }
     }
     
     @Override
@@ -168,10 +180,40 @@ public class GeoServerTileLayer extends TileLayer implements ProxyLayer {
     public String getConfigErrorMessage() {
         return configErrorMessage;
     }
+    
+    /**
+     * Replace the set of parameter filters
+     * @param parameterFilters
+     */
+    public void setParameterFilters(Set<ParameterFilter> parameterFilters) {
+        info.setParameterFilters(parameterFilters);
+        initParameterFilters();
+    }
 
     @Override
     public List<ParameterFilter> getParameterFilters() {
         return new ArrayList<ParameterFilter>(info.getParameterFilters());
+    }
+    
+    /**
+     * Remove the filter with the specified key
+     * @param key
+     * @return true if the filter existed, false otherwise
+     */
+    public boolean removeParameterFilter(String key) {
+        return info.removeParameterFilter(key);
+    }
+
+    /**
+     * Add a parameter filter, replacing any existing filter with the same key.
+     * @param parameterFilter
+     * @return true if an existing filter was replaced, false otherwise.
+     */
+    public boolean addParameterFilter(ParameterFilter parameterFilter){
+        if(parameterFilter instanceof GeoServerParameterFilter) {
+            ((GeoServerParameterFilter) parameterFilter).setLayer(this);
+        }
+        return info.addParameterFilter(parameterFilter);
     }
 
     public void resetParameterFilters() {

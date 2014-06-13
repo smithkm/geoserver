@@ -242,18 +242,6 @@ public class TileLayerInfoUtil {
     }
 
     /**
-     * Remove a parameter filter from a layer
-     * @param tileLayerInfo the layer
-     * @param paramKey the key of the parameter filter
-     * @return true if a parameter matched and was removed, false otherwise
-     * @deprecated
-     */
-    public static boolean removeParameterFilter(final GeoServerTileLayerInfo tileLayerInfo,
-            final String paramKey) {
-        return tileLayerInfo.removeParameterFilter(paramKey);
-    }
-
-    /**
      * Add a {@link RegexpParameterFilter} set accept anything, replacing any existing filter for the same parameter. 
      * @param tileLayerInfo layer to update the filter on
      * @param paramKey key for the parameter

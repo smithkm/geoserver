@@ -6,29 +6,26 @@
 package org.geoserver.gwc.layer;
 
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import javax.annotation.Nullable;
-
+import org.geoserver.catalog.Catalog;
+import org.geoserver.catalog.CatalogException;
+import org.geoserver.catalog.LayerGroupInfo;
 import org.geoserver.catalog.LayerInfo;
-import org.geoserver.catalog.StyleInfo;
+import org.geoserver.catalog.PublishedInfo;
 import org.geoserver.catalog.WorkspaceInfo;
-import org.geoserver.gwc.GWC;
+import org.geoserver.catalog.event.CatalogAddEvent;
+import org.geoserver.catalog.event.CatalogListener;
+import org.geoserver.catalog.event.CatalogModifyEvent;
+import org.geoserver.catalog.event.CatalogPostModifyEvent;
+import org.geoserver.catalog.event.CatalogRemoveEvent;
+import org.geoserver.platform.GeoServerExtensions;
 import org.geotools.util.logging.Logging;
 import org.geowebcache.filter.parameters.ParameterException;
 import org.geowebcache.filter.parameters.ParameterFilter;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Sets;
 import com.thoughtworks.xstream.annotations.XStreamAlias;
-
-import static com.google.common.base.Preconditions.*;
 
 /**
  * ParameterFilter which allows the workspace of the back end to be specified. Maintains a set 
@@ -38,158 +35,113 @@ import static com.google.common.base.Preconditions.*;
  *
  */
 @XStreamAlias("workspaceParameterFilter")
-public class WorkspaceParameterFilter extends ParameterFilter {
+public class WorkspaceParameterFilter extends GeoServerParameterFilter {
 
     private static final Logger LOGGER = Logging.getLogger(GeoServerTileLayerInfoImpl.class);
     
     boolean global;
     boolean local;
-    String localName;
-
-    /** serialVersionUID */
-    private static final long serialVersionUID = 1L;
-    
-    
-    /**
-     * Check that setLayer has been called
-     */
-    protected void checkInitialized(){
-        checkState(localName!=null, "Current workspaces not available.");
-    }
-    
-    public WorkspaceParameterFilter(){
-        super(GWC.WORKSPACE_PARAM);
-    }
     
     @Override
-    public String getDefaultValue() {
-        checkInitialized();
-        return super.getDefaultValue();
+    public String apply(String arg0) throws ParameterException {
+        // TODO Auto-generated method stub
+        return null;
     }
     
-    @Override
-    public boolean applies(String parameterValue) {
-        checkInitialized();
-        return parameterValue==null || parameterValue.isEmpty() || getLegalValues().equals(localName);
-    }
-
-    @Override
-    public String apply(String str) throws ParameterException {
-        checkInitialized();
-        if(str == null) {
-            return getDefaultValue();
+    WorkspaceInfo getWorkspace() {
+        LayerInfo li = getLayer().getLayerInfo();
+        if(li!=null) {
+            return li.getResource().getStore().getWorkspace();
         } else {
-            for(String value: getLegalValues()){
-                // Find a matching style
-                if (value.equalsIgnoreCase(str)) {
-                    return value;
-                }
-            }
-            // no match so fail
-            throw new ParameterException(str);
+            LayerGroupInfo lgi = getLayer().getLayerGroupInfo();
+            return lgi.getWorkspace();
         }
     }
     
-    @Override
-    public void setKey(String key) {
-        checkArgument(key.equalsIgnoreCase("WORKSPACE"));
-    }
-    
-    @Override
-    public void setDefaultValue(String defaultValue) {
-        if(defaultValue==null) defaultValue="";
-        if(!defaultValue.isEmpty() && availableWorkspaces!=null && !availableWorkspaces.contains(defaultValue)) {
-            LOGGER.log(Level.WARNING, "Selected default style "+defaultValue+" is not in the available styles "+availableWorkspaces+".");
+    PublishedInfo getPublished() {
+        LayerInfo li = getLayer().getLayerInfo();
+        if(li!=null) {
+            return li;
+        } else {
+            LayerGroupInfo lgi = getLayer().getLayerGroupInfo();
+            return lgi;
         }
-        super.setDefaultValue(defaultValue);
     }
     
-    /**
-     * Returns the default workspace name, or an empty string if set to use the layer specified default
-     * @return
-     */
-    public String getRealDefault() {
-        // Bypass the special processing this class normally does on the default value
-        return super.getDefaultValue();
-    }
-    
-    /**
-     * @see WorkspaceParameterFilter#setDefaultValue()
-     * @param s
-     */
-    public void setRealDefault(String s) {
-        // Just use the regular set method
-        setDefaultValue(s);
-    }
-    
-    @Override
-    public WorkspaceParameterFilter clone() {
-        WorkspaceParameterFilter clone = new WorkspaceParameterFilter();
-        clone.setDefaultValue(super.getDefaultValue()); // Want to get the configured value so use super
-        clone.setKey(getKey());
-        clone.allowedWorkspaces = getStyles();
-        clone.availableWorkspaces = availableWorkspaces;
-        return clone;
-    }
-    
-    /**
-     * Get the names of all the styles supported by the layer
-     * @return
-     */
-    public Set<String> getLayerWorkspaces() {
-        checkInitialized();
-        return availableWorkspaces;
+    Catalog getCatalog() {
+        return null;
     }
     
     @Override
     public List<String> getLegalValues() {
-        checkInitialized();
-        Set<String> layerWorkspaces = getLayerWorkspaces();
-        if (allowedWorkspaces==null) {
-            // Values is null so allow any of the backing layer's workspaces
-            return new ArrayList<String>(layerWorkspaces);
-        } else {
-            // Values is set so only allow the intersection of the specified workspaces and those of the backing layer.
-            return new ArrayList<String>(Sets.intersection(layerWorkspaces, allowedWorkspaces));
+        List<String> values = new ArrayList<>(2);
+        if(global) {
+            values.add("");
         }
-    }
-    
-    /**
-     * Set/update the availableStyles and defaultStyle based on the given GeoServer layer.
-     * 
-     * @param layer
-     */
-    public void setLayer(Collection<String> availableWorkspaces) {
-        this.availableWorkspaces = new TreeSet<String>(availableWorkspaces);
-    }
-    
-    /**
-     * Get the styles.
-     * @return The set of specified styles, or {@literal null} if all styles are allowed.
-     */
-    @Nullable public Set<String> getStyles() {
-        if(allowedWorkspaces==null) return null;
-        return Collections.unmodifiableSet(allowedWorkspaces);
-    }
-    
-    
-    /**
-     * Set the allowed workspace.  {@code null} to allow only the layer's own wo.
-     * @param styles
-     */
-    public void setWorkspaces(@Nullable Set<String> styles) {
-        if(styles==null) {
-            this.allowedWorkspaces=null;
-        } else {
-            this.allowedWorkspaces = new TreeSet<String>(styles);
+        if(local) {
+            values.add(getWorkspace().getName());
         }
+        return values;
     }
     
     @Override
-    protected ParameterFilter readResolve() {
-        super.readResolve();
-        Preconditions.checkState(this.getKey().equalsIgnoreCase("WORKSPACE"), "WorkspaceParameterFilter must have a key of \"WORKSPACE\"");
-        return this;
+    protected void onLayerSet(){
+        final LayerInfo li = getLayer().getLayerInfo();
+        if(li!=null) {
+            getCatalog().addListener(new CatalogListener() {
+
+                @Override
+                public void handleAddEvent(CatalogAddEvent event)
+                        throws CatalogException {
+                    // TODO Auto-generated method stub
+                    
+                }
+
+                @Override
+                public void handleRemoveEvent(CatalogRemoveEvent event)
+                        throws CatalogException {
+                    // TODO Auto-generated method stub
+                    
+                }
+
+                @Override
+                public void handleModifyEvent(CatalogModifyEvent event)
+                        throws CatalogException {
+                    
+                    
+                    if(event.getSource()==li.getResource().getStore() &&
+                            event.getPropertyNames().contains("workspace")) {
+                        // Workspace changed
+                        
+                    }
+                }
+
+                @Override
+                public void handlePostModifyEvent(CatalogPostModifyEvent event)
+                        throws CatalogException {
+                    // TODO Auto-generated method stub
+                    
+                }
+
+                @Override
+                public void reloaded() {
+                    // TODO Auto-generated method stub
+                    
+                }
+                
+            });
+            return li.getResource().getStore().getWorkspace();
+        } else {
+            LayerGroupInfo lgi = getLayer().getLayerGroupInfo();
+            return lgi.getWorkspace();
+        }
+
+        
     }
 
+    @Override
+    public ParameterFilter clone() {
+        // TODO Auto-generated method stub
+        return null;
+    }
 }
