@@ -6,7 +6,9 @@
 
 package org.geoserver.wfs.json;
 
+import static org.hamcrest.CoreMatchers.equalTo;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -26,7 +28,13 @@ import org.geoserver.data.test.SystemTestData;
 import org.geoserver.data.util.IOUtils;
 import org.geoserver.wfs.WFSInfo;
 import org.geoserver.wfs.WFSTestSupport;
+import org.geotools.referencing.CRS;
+import org.hamcrest.BaseMatcher;
+import org.hamcrest.Description;
+import org.hamcrest.Matcher;
 import org.junit.Test;
+import org.opengis.referencing.FactoryException;
+import org.opengis.referencing.crs.CoordinateReferenceSystem;
 
 import com.mockrunner.mock.web.MockHttpServletResponse;
 
@@ -192,6 +200,13 @@ public class GeoJSONTest extends WFSTestSupport {
     	geomArray = geomArray.getJSONArray(0);
     	geomArray = geomArray.getJSONArray(0);
     	assertEquals(geomArray.getString(0), "55.174");
+    	CoordinateReferenceSystem expectedCrs = getCatalog().getLayerByName(getLayerId(SystemTestData.AGGREGATEGEOFEATURE)).getResource().getCRS();
+    	JSONObject aCRS = rootObject.getJSONObject("crs");
+    	assertThat(aCRS.getString("type"), equalTo("name"));
+    	String identifier = aCRS.getJSONObject("properties").getString("name");
+    	CoordinateReferenceSystem resultCrs = CRS.decode(identifier);
+    	
+    	assertThat(resultCrs, equalTo(expectedCrs));
     }
     
     @Test
@@ -303,7 +318,7 @@ public class GeoJSONTest extends WFSTestSupport {
                 + "&outputformat=" + JSONType.json);
         // print(collection);
         assertEquals(1, collection.getInt("totalFeatures"));
-        assertEquals("4327", collection.getJSONObject("crs").getJSONObject("properties").getString("code"));
+        //assertEquals("4327", collection.getJSONObject("crs").getJSONObject("properties").getString("code"));
         JSONArray features = collection.getJSONArray("features");
         assertEquals(1, features.size());
         JSONObject feature = features.getJSONObject(0);
@@ -318,5 +333,52 @@ public class GeoJSONTest extends WFSTestSupport {
         assertEquals(120, c2.getInt(0));
         assertEquals(0, c2.getInt(1));
         assertEquals(100, c2.getInt(2));
+        
+        CoordinateReferenceSystem expectedCrs = getCatalog().getLayerByName(getLayerId(LINE3D)).getResource().getCRS();
+        JSONObject aCRS = collection.getJSONObject("crs");
+        assertThat(aCRS, crs(expectedCrs));
+    }
+    @Test
+    public void testGetFeatureCRS() throws Exception {
+        QName layer = SystemTestData.LINES;
+        JSONObject collection = (JSONObject) getAsJSON("wfs?request=GetFeature&version=1.0.0&typename=" + getLayerId(layer)
+                + "&outputformat=" + JSONType.json);
+        CoordinateReferenceSystem expectedCrs = getCatalog().getLayerByName(getLayerId(layer)).getResource().getCRS();
+        JSONObject aCRS = collection.getJSONObject("crs");
+        CoordinateReferenceSystem resultCrs = decodeCRS(aCRS);
+        assertThat(resultCrs, crs(expectedCrs));
+    }
+    private CoordinateReferenceSystem decodeCRS(JSONObject json) {
+        if(!json.getString("type").equals("name")) throw new IllegalArgumentException();
+        String identifier = json.getJSONObject("properties").getString("name");
+        try {
+            return CRS.decode(identifier);
+        }catch (FactoryException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+    private Matcher<JSONObject> crs(final CoordinateReferenceSystem crs) {
+        return new BaseMatcher<JSONObject>() {
+
+            @Override
+            public boolean matches(Object item) {
+                JSONObject json = (JSONObject) item;
+                if(!json.getString("type").equals("name")) return false;
+                String identifier = json.getJSONObject("properties").getString("name");
+                CoordinateReferenceSystem resultCrs;
+                try {
+                    resultCrs = CRS.decode(identifier);
+                } catch (FactoryException e) {
+                    throw new IllegalStateException(e);
+                }
+                return crs.equals(resultCrs);
+            }
+
+            @Override
+            public void describeTo(Description description) {
+                description.appendText("JSON representation of CRS ").appendValue(crs);
+            }
+            
+        };
     }
 }
