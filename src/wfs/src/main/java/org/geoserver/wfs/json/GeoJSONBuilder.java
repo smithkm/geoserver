@@ -43,6 +43,7 @@ public class GeoJSONBuilder extends JSONBuilder {
     .getLogger(this.getClass());
     
     private CRS.AxisOrder axisOrder = CRS.AxisOrder.EAST_NORTH;
+    private boolean forceAxisOrder = true;
 
     public GeoJSONBuilder(Writer w) {
         super(w);
@@ -158,7 +159,7 @@ public class GeoJSONBuilder extends JSONBuilder {
     
     private JSONBuilder writeCoordinate(double x, double y, double z) {
         this.array();
-        if(axisOrder==CRS.AxisOrder.NORTH_EAST){
+        if(axisOrder==CRS.AxisOrder.NORTH_EAST && forceAxisOrder){
             this.value(y);
             this.value(x);
         } else {
@@ -309,5 +310,13 @@ public class GeoJSONBuilder extends JSONBuilder {
      */
     public void setAxisOrder(CRS.AxisOrder axisOrder) {
         this.axisOrder = axisOrder;
+    }
+    
+    /**
+     * Should the axis order be forced to XY order.  Defaults to true per the GeoJSON spec.
+     * @param forceAxisOrder
+     */
+    public void setForceAxisOrder(boolean forceAxisOrder) {
+        this.forceAxisOrder = forceAxisOrder;
     }
 }

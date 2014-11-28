@@ -65,11 +65,19 @@ import com.vividsolutions.jts.geom.Geometry;
  * 
  * @author Simone Giannecchini, GeoSolutions
  * @author Carlo Cancellieri - GeoSolutions
- * 
+ * @author Kevin Smith - Boundless
  */
 public class GeoJSONGetFeatureResponse extends WFSGetFeatureOutputFormat {
+    
+    // Flags to deviate from the GeoJSON spec in ways that certain clients expect.
+    // These are intentionally big and verbose to indicate this is nonstandard and should be
+    // avoided. KS
+    private static final String LEGACY_CRS_KEY = "GEOSERVER_GEOJSON_LEGACY_CRS";
+    private static final String BARE_EPSG_KEY = "GEOSERVER_GEOJSON_BARE_EPSG";
+    private static final String FORCE_XY_KEY = "GEOSERVER_GEOJSON_FORCE_XY";
+    
     private final Logger LOGGER = org.geotools.util.logging.Logging.getLogger(this.getClass());
-
+    
     // store the response type
     private final boolean jsonp;
 
@@ -122,6 +130,9 @@ public class GeoJSONGetFeatureResponse extends WFSGetFeatureOutputFormat {
         if (request != null) {
             id_option = JSONType.getIdPolicy( request.getKvp() );
         }
+        
+        boolean forceXY = getFlag(FORCE_XY_KEY, request, true);  // Spec says to force XY ordering.  Some clients expect otherwise.
+        
         // prepare to write out
         OutputStreamWriter osw = null;
         Writer outWriter = null;
@@ -150,6 +161,7 @@ public class GeoJSONGetFeatureResponse extends WFSGetFeatureOutputFormat {
             }
 
             final GeoJSONBuilder jsonWriter = new GeoJSONBuilder(outWriter);
+            jsonWriter.setForceAxisOrder(forceXY);
             jsonWriter.object().key("type").value("FeatureCollection");
             if(featureCount != null) {
                 jsonWriter.key("totalFeatures").value(featureCount);
@@ -279,12 +291,15 @@ public class GeoJSONGetFeatureResponse extends WFSGetFeatureOutputFormat {
             jsonWriter.endArray(); // end features
 
             // Coordinate Referense System
+            boolean legacyCrs = getFlag(LEGACY_CRS_KEY, request, false);
+            boolean bareEpsg = getFlag(BARE_EPSG_KEY, request, false);
+            
             try {
-                if ("true".equals(GeoServerExtensions.getProperty("GEOSERVER_GEOJSON_LEGACY_CRS"))){
+                if (legacyCrs){
                     // This is wrong, but GeoServer used to do it this way.
                     writeCrsLegacy(jsonWriter, crs);
                 } else {
-                    writeCrs(jsonWriter, crs);
+                    writeCrs(jsonWriter, crs, bareEpsg);
                 }
             } catch (FactoryException e) {
                 throw (IOException) new IOException("Error looking up crs identifier").initCause(e);
@@ -324,15 +339,37 @@ public class GeoJSONGetFeatureResponse extends WFSGetFeatureOutputFormat {
             throw serviceException;
         }
     }
-
+    
+    private boolean getFlag(String key, Request request, boolean defaultValue)
+    {
+        Boolean result = null;
+        // Vendor param takes priority
+        String s = (String) request.getKvp().get(key);
+        if(s==null){
+            // Use a configured default
+            s = GeoServerExtensions.getProperty(key);
+        }
+        if(s!=null && "true".equalsIgnoreCase(s)) {
+            result=true;
+        }
+        if(s!=null && "false".equalsIgnoreCase(s)) {
+            result=false;
+        }
+        if(result==null) {
+            // Hard Default
+            result=defaultValue;
+        }
+        return result;
+    }
+    
     private void writeCrs(final GeoJSONBuilder jsonWriter,
-            CoordinateReferenceSystem crs) throws FactoryException {
+            CoordinateReferenceSystem crs, boolean allowBareEPSG) throws FactoryException {
         if (crs != null) {
             String identifier = CRS.lookupIdentifier(crs, true);
             // If we get a plain EPSG code, generate a URI as the GeoJSON spec says to 
             // prefer them.
             
-            if(identifier.startsWith("EPSG:")) {
+            if(identifier.startsWith("EPSG:") && !allowBareEPSG) {
                 String code = GML2EncodingUtils.epsgCode(crs);
                 if (code != null) {
                     identifier = SrsSyntax.OGC_URN.getPrefix() + code;
