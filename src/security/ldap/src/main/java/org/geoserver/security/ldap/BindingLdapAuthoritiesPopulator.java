@@ -15,6 +15,7 @@ import javax.naming.Name;
 import javax.naming.directory.DirContext;
 import javax.naming.directory.SearchControls;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.ldap.NamingException;
@@ -157,12 +158,17 @@ public class BindingLdapAuthoritiesPopulator implements
         if (logger.isDebugEnabled()) {
             logger.debug("Getting authorities for user " + userDn);
         }
-
+        if (logger.isDebugEnabled() && username.startsWith("robert.sallee")) {
+            logger.debug("We are here: ", new RuntimeException());
+        }
         final List<GrantedAuthority> result = new ArrayList<GrantedAuthority>();
 
         // username is in the form username:password -> authenticate before
         // search
         if (username.indexOf(":") != -1) {
+            if (logger.isDebugEnabled()) {
+                logger.debug("Password included with username, authenticating before finding roles");
+            }
             String[] userAndPassword = username.split(":");
             final String userName = userAndPassword[0];
             String password = userAndPassword[1];
@@ -174,19 +180,40 @@ public class BindingLdapAuthoritiesPopulator implements
                         @Override
                         public void executeWithContext(DirContext ctx,
                                 LdapEntryIdentification ldapEntryIdentification) {
+                            if (logger.isDebugEnabled()) {
+                                logger.debug("User "+userDn+" authenticated, now finding roles with context");
+                            }
                             getAllRoles(user, userDn, result, userName, ctx);
+                            if (logger.isDebugEnabled()) {
+                                logger.debug("Got roles, callback complete");
+                            }
                         }
+                    }, new AuthenticationErrorCallback(){
+
+                        @Override
+                        public void execute(Exception e) {
+                            logger.warn("Error during authentication", e);
+                        }
+                        
                     });
         } else {
+            if (logger.isDebugEnabled()) {
+                logger.debug("Password not included with username for user "+userDn+" Looking up roles without context");
+            }
             getAllRoles(user, userDn, result, username, null);
         }
-
+        if (logger.isDebugEnabled()) {
+            logger.debug("Roles found: "+ StringUtils.join(result.iterator(), ", "));
+        }
         return result;
     }
 
     public Set<GrantedAuthority> getGroupMembershipRoles(final DirContext ctx,
             String userDn, String username) {
         if (getGroupSearchBase() == null) {
+            if (logger.isDebugEnabled()) {
+                logger.debug("Search base is null.  Will not search for groups.");
+            }
             return new HashSet<GrantedAuthority>();
         }
 
@@ -307,6 +334,10 @@ public class BindingLdapAuthoritiesPopulator implements
     private void getAllRoles(final DirContextOperations user,
             final String userDn, final List<GrantedAuthority> result,
             final String userName, DirContext ctx) {
+        if (logger.isDebugEnabled()) {
+            logger.debug("getting all roles for user "+userName);
+        }
+
         Set<GrantedAuthority> roles = getGroupMembershipRoles(ctx, userDn,
                 userName);
 
@@ -314,13 +345,21 @@ public class BindingLdapAuthoritiesPopulator implements
                 userName);
 
         if (extraRoles != null) {
+            if (logger.isDebugEnabled()) {
+                logger.debug("Found extra roles.  Applying.");
+            }
             roles.addAll(extraRoles);
         }
 
         if (defaultRole != null) {
+            if (logger.isDebugEnabled()) {
+                logger.debug("Found default role. Applying.");
+            }
             roles.add(defaultRole);
         }
-
+        if (logger.isDebugEnabled()) {
+            logger.debug("Applying group membership roles");
+        }
         result.addAll(roles);
     }
 }
