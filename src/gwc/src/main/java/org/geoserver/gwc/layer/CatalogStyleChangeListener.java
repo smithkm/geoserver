@@ -54,6 +54,11 @@ public class CatalogStyleChangeListener implements CatalogListener {
 
     private Catalog catalog;
 
+    @Deprecated
+    public CatalogStyleChangeListener(final GWC mediator) {
+        this(mediator, mediator.getCatalog());
+    }
+    
     public CatalogStyleChangeListener(final GWC mediator, Catalog catalog) {
         this.mediator = mediator;
         this.catalog = catalog;

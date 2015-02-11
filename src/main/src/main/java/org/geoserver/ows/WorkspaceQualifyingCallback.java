@@ -91,6 +91,11 @@ public abstract class WorkspaceQualifyingCallback implements DispatcherCallback 
         return name;
     }
     
+    @Deprecated
+    protected void qualifyNames(List<String> names, WorkspaceInfo ws) {
+        qualifyLayerNames(names, ws);
+    }
+    
     protected void qualifyLayerNames(List<String> names, WorkspaceInfo ws) {
         for (int i = 0; i < names.size(); i++) {
             names.set(i, qualifyName(names.get(i), ws));
