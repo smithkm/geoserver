@@ -7,8 +7,6 @@ package org.geoserver.config;
 
 import static org.junit.Assert.*;
 
-import java.net.URL;
-
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.LayerGroupInfo;
 import org.geoserver.catalog.LayerInfo;
@@ -19,11 +17,11 @@ import org.geoserver.config.util.XStreamPersisterFactory;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.platform.GeoServerExtensionsHelper;
 import org.geoserver.platform.GeoServerResourceLoader;
+import org.geoserver.platform.resource.TemporaryResourceStore;
 import org.geotools.data.DataUtilities;
-import org.geotools.styling.SLD;
-import org.geotools.styling.Style;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 
 public class DefaultGeoServerLoaderTest {
@@ -32,10 +30,13 @@ public class DefaultGeoServerLoaderTest {
     Catalog catalog;
     XStreamPersister xp;
     
+    @Rule
+    public TemporaryResourceStore storeRule = TemporaryResourceStore.use(DataUtilities.urlToFile(
+                DefaultGeoServerLoaderTest.class.getResource("/data_dir/nested_layer_groups")));
+    
     @Before
     public void setUp() {
-        URL url = DefaultGeoServerLoaderTest.class.getResource("/data_dir/nested_layer_groups");
-        GeoServerResourceLoader resourceLoader = new GeoServerResourceLoader(DataUtilities.urlToFile(url));
+        GeoServerResourceLoader resourceLoader = new GeoServerResourceLoader(storeRule.getStore());
         GeoServerExtensionsHelper.singleton( "resourceLoader", resourceLoader);
         
         loader = new DefaultGeoServerLoader(resourceLoader);

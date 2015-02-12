@@ -11,24 +11,29 @@ import java.util.Properties;
 
 import org.apache.commons.io.FileUtils;
 import org.geoserver.platform.GeoServerResourceLoader;
+import org.geoserver.platform.resource.TemporaryResourceStore;
 import org.geotools.data.DataUtilities;
 import org.hamcrest.CoreMatchers;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 
 public class JDBCConfigPropertiesTest {
 
     GeoServerResourceLoader loader;
+    
+    @Rule
+    public TemporaryResourceStore storeRule = TemporaryResourceStore.temp();
 
     @Before
     public void setUp() throws IOException {
-        loader = new GeoServerResourceLoader(createTempDir());
+        loader = new GeoServerResourceLoader(storeRule.getStore());
     }
 
     @After
     public void tearDown() throws IOException {
-        FileUtils.deleteDirectory(loader.getBaseDirectory());
+        
     }
 
     @Test

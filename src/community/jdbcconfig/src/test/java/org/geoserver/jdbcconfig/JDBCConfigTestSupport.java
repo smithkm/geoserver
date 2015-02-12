@@ -16,8 +16,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.logging.Level;
-
 import java.util.logging.Logger;
+
 import javax.servlet.ServletContext;
 import javax.sql.DataSource;
 
@@ -31,6 +31,8 @@ import org.geoserver.jdbcconfig.internal.Util;
 import org.geoserver.jdbcconfig.internal.XStreamInfoSerialBinding;
 import org.geoserver.platform.GeoServerExtensionsHelper;
 import org.geoserver.platform.GeoServerResourceLoader;
+import org.geoserver.platform.resource.TemporaryResourceStore;
+import org.junit.Rule;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -202,11 +204,14 @@ public class JDBCConfigTestSupport {
     public JDBCConfigTestSupport(DBConfig dbConfig) {
         this.dbConfig = dbConfig;
     }
-
+    
+    @Rule
+    public TemporaryResourceStore storeRule = TemporaryResourceStore.temp();
+    
     public void setUp() throws Exception {
         ConfigDatabase.LOGGER.setLevel(Level.FINER);
 
-        resourceLoader = new GeoServerResourceLoader(createTempDir());
+        resourceLoader = new GeoServerResourceLoader(storeRule.getStore());
 
         // just to avoid hundreds of warnings in the logs about extension lookups with no app
         // context set

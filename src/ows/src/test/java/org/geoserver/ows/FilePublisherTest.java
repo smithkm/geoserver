@@ -9,17 +9,23 @@ package org.geoserver.ows;
 import com.mockrunner.mock.web.MockHttpServletRequest;
 import com.mockrunner.mock.web.MockHttpServletResponse;
 import com.mockrunner.mock.web.MockServletContext;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+
 import org.geoserver.platform.GeoServerResourceLoader;
+import org.geoserver.platform.resource.TemporaryResourceStore;
 import org.junit.AfterClass;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 
 /**
@@ -31,17 +37,17 @@ public class FilePublisherTest {
     static FilePublisher publisher;
     static List<String[]> paths = new ArrayList<String[]>();
 
+    @ClassRule
+    public static TemporaryResourceStore storeRule = TemporaryResourceStore.temp();
+    
     @BeforeClass
     public static void create() throws Exception {
-        File tmp = File.createTempFile("xyz", "123");
-        tmp.delete();
-        tmp.mkdirs();
-        tmp.deleteOnExit();
+        File tmp = storeRule.getDirectory();
 
         paths.add(create(tmp, "with space", "ascii"));
         paths.add(create(tmp, "with space", "làtîn"));
 
-        GeoServerResourceLoader loader = new GeoServerResourceLoader(tmp);
+        GeoServerResourceLoader loader = new GeoServerResourceLoader(storeRule.getStore());
         publisher = new FilePublisher(loader);
         publisher.setServletContext(new MockServletContext());
     }
@@ -54,7 +60,7 @@ public class FilePublisherTest {
         parent.mkdirs();
         String fname = path[path.length - 1];
         File file = new File(parent, fname);
-        file.deleteOnExit();
+        
         FileOutputStream fout = new FileOutputStream(file);
         fout.write(fname.getBytes("UTF-8"));
         fout.close();

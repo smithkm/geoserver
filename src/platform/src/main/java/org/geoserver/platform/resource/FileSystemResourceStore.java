@@ -20,11 +20,12 @@ import java.util.logging.Logger;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.platform.util.Disposer;
 import org.geotools.util.logging.Logging;
+import org.springframework.beans.factory.DisposableBean;
 
 /**
  * Implementation of ResourceStore backed by the file system.
  */
-public class FileSystemResourceStore implements ResourceStore {
+public class FileSystemResourceStore implements ResourceStore, DisposableBean {
     
     /** LockProvider used to secure resources for exclusive access */
     protected LockProvider lockProvider = new NullLockProvider();
@@ -456,5 +457,12 @@ public class FileSystemResourceStore implements ResourceStore {
             }
         }
 
+    }
+
+    @Override
+    public void destroy() throws Exception {
+        if(watcher!=null) {
+            watcher.destroy();
+        }
     }
 }

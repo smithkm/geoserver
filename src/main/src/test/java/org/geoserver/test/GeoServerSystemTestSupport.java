@@ -165,7 +165,7 @@ public class GeoServerSystemTestSupport extends GeoServerBaseTestSupport<SystemT
      * credentials for mock requests
      */
     protected String username, password; 
-
+    
     protected final void setUp(SystemTestData testData) throws Exception {
         // setup quiet logging (we need to to this here because Data
         // is loaded before GoeServer has a chance to setup logging for good)
@@ -175,7 +175,7 @@ public class GeoServerSystemTestSupport extends GeoServerBaseTestSupport<SystemT
             LOGGER.log(Level.SEVERE, "Could not configure log4j logging redirection", e);
         }
         System.setProperty(LoggingUtils.RELINQUISH_LOG4J_CONTROL, "true");
-        GeoServerResourceLoader loader = new GeoServerResourceLoader(testData.getDataDirectoryRoot());
+        GeoServerResourceLoader loader = new GeoServerResourceLoader(testData.getResourceStore());
         LoggingUtils.configureGeoServerLogging(loader, getClass().getResourceAsStream(getLogConfiguration()), false, true, null);
 
         setUpTestData(testData);

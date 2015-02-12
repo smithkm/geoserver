@@ -9,9 +9,11 @@ import java.io.File;
 
 import org.geoserver.config.GeoServerDataDirectory;
 import org.geoserver.platform.GeoServerResourceLoader;
+import org.geoserver.platform.resource.TemporaryResourceStore;
 import org.geoserver.security.GeoServerSecurityManager;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.springframework.ldap.test.LdapTestUtils;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -29,19 +31,17 @@ public abstract class LDAPBaseTest {
     protected Authentication authentication;
     protected Authentication authenticationOther;
     protected LDAPBaseSecurityServiceConfig config;
-    private File tempFolder;
     
     public static final String ldapServerUrl = LDAPTestUtils.LDAP_SERVER_URL;
     public static final String basePath = LDAPTestUtils.LDAP_BASE_PATH;
     
+    @Rule
+    public TemporaryResourceStore storeRule = TemporaryResourceStore.temp();
+    
     @Before
     public void setUp() throws Exception {
     
-        tempFolder = File.createTempFile("ldap", "test");
-        tempFolder.delete();
-        tempFolder.mkdirs();
-        GeoServerResourceLoader resourceLoader = new GeoServerResourceLoader(
-                tempFolder);
+        GeoServerResourceLoader resourceLoader = new GeoServerResourceLoader(storeRule.getStore());
         GeoServerSecurityManager securityManager = new GeoServerSecurityManager(
                 new GeoServerDataDirectory(resourceLoader));
         securityProvider = new LDAPSecurityProvider(securityManager);
@@ -62,8 +62,6 @@ public abstract class LDAPBaseTest {
     
     @After
     public void tearDown() throws Exception {
-        tempFolder.delete();
-
         LdapTestUtils
                 .destroyApacheDirectoryServer(LdapTestUtils.DEFAULT_PRINCIPAL,
                         LdapTestUtils.DEFAULT_PASSWORD);

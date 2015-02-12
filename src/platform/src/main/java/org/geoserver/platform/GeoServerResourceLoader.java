@@ -93,6 +93,7 @@ public class GeoServerResourceLoader extends DefaultResourceLoader implements Re
      *
      * @param baseDirectory The directory in which
      */
+    @Deprecated
     public GeoServerResourceLoader(File baseDirectory) {
         this.baseDirectory = baseDirectory;
         this.resources = new FileSystemResourceStore( baseDirectory );

@@ -14,10 +14,12 @@ import java.io.File;
 import org.apache.commons.io.FileUtils;
 import org.geoserver.catalog.impl.ModificationProxy;
 import org.geoserver.platform.GeoServerResourceLoader;
+import org.geoserver.platform.resource.TemporaryResourceStore;
 import org.geowebcache.config.XMLConfiguration;
 import org.geowebcache.config.ContextualConfigurationProvider.Context;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.springframework.web.context.WebApplicationContext;
 
@@ -30,12 +32,12 @@ public class DefaultTileLayerCatalogTest {
 
     private DefaultTileLayerCatalog catalog;
 
+    @Rule
+    public TemporaryResourceStore storeRule = TemporaryResourceStore.temp();
+    
     @Before
     public void setUp() throws Exception {
-        baseDirectory = new File("target", "mockTileLayerCatalog");
-        FileUtils.deleteDirectory(baseDirectory);
-        baseDirectory.mkdirs();
-        GeoServerResourceLoader resourceLoader = new GeoServerResourceLoader(baseDirectory);
+        GeoServerResourceLoader resourceLoader = new GeoServerResourceLoader(storeRule.getStore());
 
         XStream xStream = XMLConfiguration.getConfiguredXStreamWithContext(new XStream(), 
                 (WebApplicationContext) null, Context.PERSIST);
@@ -45,7 +47,7 @@ public class DefaultTileLayerCatalogTest {
 
     @After
     public void tearDown() throws Exception {
-        FileUtils.deleteDirectory(baseDirectory);
+        
     }
 
     @Test public void testGetLayerById() {

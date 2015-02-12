@@ -23,6 +23,7 @@ import org.geoserver.config.util.XStreamPersisterFactory;
 import org.geoserver.logging.LoggingUtils.GeoToolsLoggingRedirection;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.platform.GeoServerResourceLoader;
+import org.geoserver.platform.resource.FileSystemResourceStore;
 import org.geotools.util.logging.CommonsLoggerFactory;
 import org.geotools.util.logging.Log4JLoggerFactory;
 import org.geotools.util.logging.Logging;
@@ -64,7 +65,8 @@ public class LoggingStartupContextListener implements ServletContextListener {
         } else {
             try {
                 File baseDir = new File(GeoServerResourceLoader.lookupGeoServerDataDirectory(context));
-                GeoServerResourceLoader loader = new GeoServerResourceLoader(baseDir);
+                FileSystemResourceStore fsrs = new FileSystemResourceStore(baseDir);
+                GeoServerResourceLoader loader = new GeoServerResourceLoader(fsrs);
                 
                 File f= loader.find( "logging.xml" );
                 LoggingInfo loginfo = getLogging(loader);

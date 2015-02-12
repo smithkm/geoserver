@@ -126,16 +126,6 @@ public class SampleDataAccessMockData extends SystemTestData {
     }
 
     /**
-     * Removes the mock data directory.
-     * 
-     * @see org.geoserver.data.test.TestData#tearDown()
-     */
-    public void tearDown() throws Exception {
-        IOUtils.delete(data);
-        data = null;
-    }
-
-    /**
      * Writes catalog.xml to the data directory.
      * 
      * @throws IOException

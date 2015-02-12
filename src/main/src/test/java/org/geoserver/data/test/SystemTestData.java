@@ -50,6 +50,9 @@ import org.geoserver.data.util.IOUtils;
 import org.geoserver.ows.util.OwsUtils;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.platform.GeoServerResourceLoader;
+import org.geoserver.platform.resource.FileSystemResourceStore;
+import org.geoserver.platform.resource.ResourceStore;
+import org.geoserver.platform.resource.TemporaryResourceStore;
 import org.geoserver.test.GeoServerSystemTestSupport;
 import org.geotools.coverage.grid.io.GridCoverage2DReader;
 import org.geotools.coverage.grid.io.AbstractGridFormat;
@@ -63,6 +66,7 @@ import org.geotools.gce.imagemosaic.ImageMosaicFormat;
 import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.geotools.referencing.CRS;
 import org.geotools.util.logging.Logging;
+import org.junit.Rule;
 import org.springframework.context.ApplicationContext;
 
 /**
@@ -109,12 +113,15 @@ public class SystemTestData extends CiteTestData {
 
     /** internal catalog, used for setup before the real catalog available */
     Catalog catalog;
+    
+    protected FileSystemResourceStore resourceStore;
 
     public SystemTestData() throws IOException {
         // setup the root
         data = IOUtils.createRandomDirectory("./target", "default", "data");
         data.delete();
         data.mkdir();
+        resourceStore = new FileSystemResourceStore(data);
     }
 
     public SystemTestData(File data) {
@@ -284,7 +291,7 @@ public class SystemTestData extends CiteTestData {
     protected void createCatalog() throws IOException {
         CatalogImpl catalog = new CatalogImpl();
         catalog.setExtendedValidation(false);
-        catalog.setResourceLoader(new GeoServerResourceLoader(data));
+        catalog.setResourceLoader(new GeoServerResourceLoader(resourceStore));
         
         catalog.addListener(new GeoServerPersister(catalog.getResourceLoader(), 
             createXStreamPersister()));
@@ -305,7 +312,7 @@ public class SystemTestData extends CiteTestData {
 
     protected void createConfig() {
         GeoServerImpl geoServer = new GeoServerImpl();
-        geoServer.addListener(new GeoServerPersister(new GeoServerResourceLoader(data), 
+        geoServer.addListener(new GeoServerPersister(new GeoServerResourceLoader(resourceStore), 
             createXStreamPersister()));
 
         GeoServerInfo global = geoServer.getFactory().createGlobal();
@@ -948,12 +955,24 @@ public class SystemTestData extends CiteTestData {
     
     @Override
     public void tearDown() throws Exception {
-        FileUtils.deleteDirectory(data);        
+        try{
+            resourceStore.destroy();
+            resourceStore = null;
+        } finally {
+            if(data != null){
+                IOUtils.delete(data);
+                data = null;
+            }
+        }
     }
     
     @Override
     public File getDataDirectoryRoot() {
         return data;
+    }
+    
+    public ResourceStore getResourceStore() {
+        return resourceStore;
     }
     
     @Override

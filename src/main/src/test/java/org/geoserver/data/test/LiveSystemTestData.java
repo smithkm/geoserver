@@ -25,10 +25,4 @@ public class LiveSystemTestData extends SystemTestData {
         IOUtils.deepCopy(source, data);
     }
 
-    public void tearDown() throws Exception {
-        if(data != null) {
-            IOUtils.delete(data);
-        }
-    }
-
 }
