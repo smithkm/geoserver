@@ -50,11 +50,21 @@ public class FileSystemResourceTheoryTest extends ResourceTheoryTest {
     }
 
     @Test
-    public void invalid() {
+    public void relativePathsInvalid() {
         try {
-            Resource resource = store.get("foo|");
+            Resource resource = store.get("../foo");
             assertNotNull(resource);
-            fail("| invalid");
+            fail("relative paths invalid");
+        } catch (IllegalArgumentException expected) {
+        }
+    }
+    
+    @Test
+    public void backslashInvalid() {
+        try {
+            Resource resource = store.get("../foo");
+            assertNotNull(resource);
+            fail("relative paths invalid");
         } catch (IllegalArgumentException expected) {
         }
     }
