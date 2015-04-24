@@ -40,12 +40,16 @@ import org.geoserver.security.decorators.SecuredLayerInfo;
 import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.opengis.filter.Filter;
 import org.opengis.filter.sort.SortBy;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 public class SecureCatalogImplTest extends AbstractAuthorizationTest {
+    @Rule
+    public GeoServerExtensionsHelper.ExtensionsHelperRule extensions = 
+        new GeoServerExtensionsHelper.ExtensionsHelperRule();
 
     @Before
     public void setUp() throws Exception {
@@ -427,7 +431,7 @@ public class SecureCatalogImplTest extends AbstractAuthorizationTest {
             }
         };
         this.catalog = withLayers;
-        GeoServerExtensionsHelper.singleton("catalog", catalog, Catalog.class);
+        extensions.singleton("catalog", catalog, Catalog.class);
 
         // and the secure catalog with the filter
         buildManager("publicRead.properties", filter);
@@ -543,7 +547,7 @@ public class SecureCatalogImplTest extends AbstractAuthorizationTest {
         expect(eoCatalog.getLayerGroupByName("topp", eoStatesLayerGroup.getName())).andReturn(eoStatesLayerGroup).anyTimes();        
         replay(eoCatalog);
         this.catalog = eoCatalog;
-        GeoServerExtensionsHelper.singleton("catalog", eoCatalog, Catalog.class);
+        extensions.singleton("catalog", eoCatalog, Catalog.class);
         
         buildManager("lockedLayerInLayerGroup.properties");
         SecurityContextHolder.getContext().setAuthentication(roUser);
