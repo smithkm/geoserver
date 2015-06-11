@@ -117,6 +117,11 @@ public interface LayerGroupInfo extends PublishedInfo {
     List<PublishedInfo> getLayers();
     
     /**
+     * The scale ranges of visibility for the child publishables.
+     */
+    List<ScaleRange> getScaleRanges();
+    
+    /**
      * The styles for the layers in the group.
      * <p>
      * This list is a 1-1 correspondence to {@link #getLayers()}.
