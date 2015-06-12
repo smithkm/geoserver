@@ -113,6 +113,7 @@ public class LayerGroupHelperTest extends GeoServerMockTestSupport {
         pondsLayer = buildLayer(MockData.PONDS);
         ponds = buildGroup("ponds", pondsLayer);
         ponds.getStyles().add(null);
+        ponds.getScaleRanges().add(ScaleRange.INCLUDE);
 
         forestLayer = buildLayer(MockData.FORESTS);
         buildingsLayer = buildLayer(MockData.BUILDINGS);
@@ -262,7 +263,33 @@ public class LayerGroupHelperTest extends GeoServerMockTestSupport {
         List<StyleInfo> styles = new LayerGroupHelper(group).allStylesForRendering();
         assertEquals(expected, styles);
     }
-
+    
+    @Test
+    public void testAllScaleRangesForRendering() {
+        // plain group
+        assertExpectedRenderingScaleRanges(Arrays.asList(ScaleRange.INCLUDE), ponds);
+        // EO group
+        assertExpectedRenderingScaleRanges(Arrays.asList(ScaleRange.INCLUDE), lakesNeatline);
+        // nested group
+        assertExpectedRenderingScaleRanges(
+                Arrays.asList(
+                        ScaleRange.INCLUDE,ScaleRange.INCLUDE,ScaleRange.INCLUDE,ScaleRange.INCLUDE
+                    ), nested);
+        
+        try {
+            // a container group
+            assertExpectedRenderingScaleRanges(Arrays.asList(ScaleRange.INCLUDE), containerParent);
+            fail("Unsupported Operation...");
+        } catch (UnsupportedOperationException e) {
+        }        
+        
+        // a nested container
+        assertExpectedRenderingScaleRanges(Arrays.asList(ScaleRange.INCLUDE), containerParent);
+    }
+    private void assertExpectedRenderingScaleRanges(List<ScaleRange> expected, LayerGroupInfo group) {
+        List<ScaleRange> styles = new LayerGroupHelper(group).allScaleRangesForRendering();
+        assertEquals(expected, styles);
+    }
     @Test
     public void testBounds() throws Exception {
         // plain group

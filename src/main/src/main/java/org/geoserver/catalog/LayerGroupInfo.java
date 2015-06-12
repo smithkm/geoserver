@@ -140,8 +140,13 @@ public interface LayerGroupInfo extends PublishedInfo {
      * 
      * @return
      */
-    List<StyleInfo> styles();  
-        
+    List<StyleInfo> styles();
+    
+    /**
+     * @return 
+     */
+    List<ScaleRange> scaleRanges();
+    
     /**
      * The bounds for the base map.
      */

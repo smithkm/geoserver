@@ -273,4 +273,40 @@ public class LayerGroupHelper {
         
         return false;
     }
+
+
+    public List<ScaleRange> allScaleRangesForRendering() {
+        List<ScaleRange> ranges = new ArrayList<>();
+        allScaleRangesForRendering(group, ranges, true);
+        return ranges;
+    }
+    
+    private static void allScaleRangesForRendering(LayerGroupInfo group, List<ScaleRange> styles, boolean root) {
+        switch (group.getMode()) {
+        case EO:
+            styles.add(ScaleRange.INCLUDE);
+            break;
+        case CONTAINER:
+            if (root) {
+                throw new UnsupportedOperationException("LayerGroup mode " + Mode.CONTAINER.getName()
+                        + " can not be rendered");
+            }
+            // continue to default behaviour:
+        default:
+            int size = group.getLayers().size();
+            for (int i = 0; i < size; i++) {
+                PublishedInfo p = group.getLayers().get(i);
+                if (p instanceof LayerInfo) {
+                    if(group.getScaleRanges().isEmpty()) {
+                        styles.add(ScaleRange.INCLUDE);
+                    } else {
+                        styles.add(group.getScaleRanges().get(i));
+                    }
+                } else {
+                    allScaleRangesForRendering((LayerGroupInfo) p, styles, false);
+                }
+            }
+        }
+    }
+
 }

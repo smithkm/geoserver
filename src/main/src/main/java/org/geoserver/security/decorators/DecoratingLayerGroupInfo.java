@@ -15,6 +15,7 @@ import org.geoserver.catalog.LayerIdentifierInfo;
 import org.geoserver.catalog.LayerInfo;
 import org.geoserver.catalog.MetadataMap;
 import org.geoserver.catalog.PublishedInfo;
+import org.geoserver.catalog.ScaleRange;
 import org.geoserver.catalog.StyleInfo;
 import org.geoserver.catalog.PublishedType;
 import org.geoserver.catalog.WorkspaceInfo;
@@ -59,6 +60,11 @@ public class DecoratingLayerGroupInfo extends AbstractDecorator<LayerGroupInfo> 
     }
     
     @Override
+    public List<ScaleRange> getScaleRanges() {
+        return delegate.getScaleRanges();
+    }
+    
+    @Override
     public List<LayerInfo> layers() {
         LayerGroupHelper helper = new LayerGroupHelper(this);
         return helper.allLayersForRendering();
@@ -68,7 +74,13 @@ public class DecoratingLayerGroupInfo extends AbstractDecorator<LayerGroupInfo> 
     public List<StyleInfo> styles() {
         LayerGroupHelper helper = new LayerGroupHelper(this);
         return helper.allStylesForRendering();
-    }  
+    }
+    
+    @Override
+    public List<ScaleRange> scaleRanges() {
+        LayerGroupHelper helper = new LayerGroupHelper(this);
+        return helper.allScaleRangesForRendering();
+    }
     
     @Override
     public String getName() {

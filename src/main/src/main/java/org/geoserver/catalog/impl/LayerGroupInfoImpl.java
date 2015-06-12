@@ -16,6 +16,7 @@ import org.geoserver.catalog.LayerIdentifierInfo;
 import org.geoserver.catalog.LayerInfo;
 import org.geoserver.catalog.MetadataMap;
 import org.geoserver.catalog.PublishedInfo;
+import org.geoserver.catalog.ScaleRange;
 import org.geoserver.catalog.StyleInfo;
 import org.geoserver.catalog.PublishedType;
 import org.geoserver.catalog.WorkspaceInfo;
@@ -50,6 +51,7 @@ public class LayerGroupInfoImpl implements LayerGroupInfo {
     
     protected List<PublishedInfo> publishables = new ArrayList<PublishedInfo>();
     protected List<StyleInfo> styles = new ArrayList<StyleInfo>();
+    protected List<ScaleRange> scaleRanges = new ArrayList<ScaleRange>();
     
     protected ReferencedEnvelope bounds;
     protected MetadataMap metadata = new MetadataMap();
@@ -222,6 +224,12 @@ public class LayerGroupInfoImpl implements LayerGroupInfo {
     }
     
     @Override
+    public List<ScaleRange> scaleRanges() {
+        LayerGroupHelper helper = new LayerGroupHelper(this);
+        return helper.allScaleRangesForRendering();
+    }
+    
+    @Override
     public ReferencedEnvelope getBounds() {
         return bounds;
     }
@@ -387,5 +395,11 @@ public class LayerGroupInfoImpl implements LayerGroupInfo {
     @Override
     public PublishedType getType() {
         return PublishedType.GROUP;
+    }
+
+
+    @Override
+    public List<ScaleRange> getScaleRanges() {
+        return scaleRanges;
     }
 }
