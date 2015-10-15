@@ -49,7 +49,7 @@ public class CapabilitiesTest extends WMSTestSupport {
     @Override
     protected void setUpTestData(SystemTestData testData) throws Exception {
         super.setUpTestData(testData);
-        testData.setUpDefaultRasterLayers();        
+        testData.setUpDefaultRasterLayers();
     }
 
     @Override
@@ -75,6 +75,14 @@ public class CapabilitiesTest extends WMSTestSupport {
         StyleInfo tigerRoadsStyle = catalog.getStyleByName(ws, "tiger_roads");
         lakesLayer.getStyles().add(tigerRoadsStyle);
         catalog.save(lakesLayer);
+        
+        // Add a global layer group
+        LayerGroupInfo lgi = catalog.getFactory().createLayerGroup();
+        lgi.setName("globalLayerGroup");
+        lgi.getLayers().add(lakesLayer);
+        lgi.setBounds(lakesLayer.getResource().boundingBox());
+        catalog.add(lgi);
+
     }
 
 
@@ -188,6 +196,19 @@ public class CapabilitiesTest extends WMSTestSupport {
             assertTrue(attribute.contains("geoserver/cite/wms"));
         }
 
+    }
+    
+    //XmlTestUtil xml = new XmlTestUtil();
+    
+    @Test
+    public void testWorkspaceQualifiedHasNoGLobalLayerGroups() throws Exception {
+        Document dom = dom(get("cite/wms?request=getCapabilities&version=1.1.1"), true);
+        
+        //assertThat(dom, not(xml.hasNode("//Layer/Name['globalLayerGroup']")));
+        
+        XpathEngine xpath = XMLUnit.newXpathEngine();
+        assertEquals(0, xpath.getMatchingNodes("//Layer/Name['globalLayerGroup']", dom)
+                .getLength());
     }
 
     @Test
