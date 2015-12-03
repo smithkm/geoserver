@@ -26,25 +26,35 @@ public abstract class AbstractDecorator<D> implements Wrapper {
     }
 
     public boolean isWrapperFor(Class<?> iface) {
-        // first drill down to the latest wrapper, then check if the last delegate actually
-        // implements the required interface
-        if (delegate instanceof Wrapper)
-            return ((Wrapper) delegate).isWrapperFor(iface);
-        else if (iface.isInstance(delegate))
+        if(iface.isInstance(this)) {
+            // We are already the thing we're after
             return true;
-        else
+        } else if (iface.isInstance(delegate)) {
+            // The immediate delegate is what we're after
+            return true;
+        } else if (delegate instanceof Wrapper) {
+            // No sign of what we're after, but we can keep digging
+            return ((Wrapper) delegate).isWrapperFor(iface);
+        } else {
+            // We hit the bottom without finding it.
             return false;
+        }
     }
 
     public <T> T unwrap(Class<T> iface) throws IllegalArgumentException {
-        // first drill down to the latest wrapper, then check if the last delegate actually
-        // implements the required interface and return it
-        if (delegate instanceof Wrapper)
+        if(iface.isInstance(this)) {
+            // We are already the thing we're after
+            return iface.cast(this);
+        } else if (iface.isInstance(delegate)) {
+            // The immediate delegate is what we're after
+            return iface.cast(delegate);
+        } else if (delegate instanceof Wrapper) {
+            // No sign of what we're after, but we can keep digging
             return ((Wrapper) delegate).unwrap(iface);
-        else if (iface.isInstance(delegate))
-            return (T) delegate;
-        else
+        } else {
+            // We hit the bottom bottom so give up.
             throw new IllegalArgumentException("Cannot unwrap to the requested interface " + iface);
+        }
     }
 
     public boolean equals(Object obj) {

@@ -7,9 +7,7 @@ package org.geoserver.web.demo;
 
 
 import java.util.ArrayList;
-
 import java.io.Serializable;
-
 import java.util.Arrays;
 
 import static org.geoserver.catalog.Predicates.*;
@@ -24,9 +22,12 @@ import org.apache.wicket.extensions.markup.html.repeater.util.SortParam;
 import org.apache.wicket.model.IModel;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.LayerGroupInfo;
+import org.geoserver.catalog.LayerGroupVisibilityPolicy;
 import org.geoserver.catalog.LayerInfo;
 import org.geoserver.catalog.Predicates;
 import org.geoserver.catalog.PublishedInfo;
+import org.geoserver.catalog.impl.AbstractCatalogDecorator;
+import org.geoserver.catalog.impl.AdvertisedCatalog;
 import org.geoserver.catalog.util.CloseableIterator;
 import org.geoserver.catalog.util.CloseableIteratorAdapter;
 import org.geoserver.web.wicket.GeoServerDataProvider;
@@ -226,7 +227,8 @@ public class PreviewLayerProvider extends GeoServerDataProvider<PreviewLayer> {
         Filter nonContainerGroup = Predicates.or(Predicates.equal("mode", LayerGroupInfo.Mode.EO),
                 Predicates.equal("mode", LayerGroupInfo.Mode.NAMED),
                 Predicates.equal("mode", LayerGroupInfo.Mode.SINGLE));
-
+        Filter groupVisibilityFilter;
+        LayerGroupVisibilityPolicy groupVisibilityPolicy = getGroupVisibility();
         // Filter for the Layers
         Filter layerFilter = Predicates.and(isLayerInfo, enabledFilter, storeEnabledFilter,
                 advertisedFilter);
@@ -237,7 +239,19 @@ public class PreviewLayerProvider extends GeoServerDataProvider<PreviewLayer> {
         // And between the new filter and the initial filter
         return Predicates.and(filter, orFilter);
     }
-
+    private <T extends Catalog> T unwravelCatalog(Catalog cat, Class<T> klazz) {
+        if (klazz.isAssignableFrom(cat.getClass())) {
+            return klazz.cast(cat);
+        } else if(cat instanceof AbstractCatalogDecorator) {
+            
+        }
+    }
+    private LayerGroupVisibilityPolicy getGroupVisibility() {
+        Catalog cat = getCatalog();
+        if(cat instanceof AdvertisedCatalog) {
+            ((AdvertisedCatalog) cat).getLayerGroupVisibilityPolicy();
+        }
+    }
     /**
      * Inner class which calls the sizeInternal() method
      * 

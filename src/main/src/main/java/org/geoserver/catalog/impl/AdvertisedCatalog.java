@@ -54,6 +54,13 @@ public class AdvertisedCatalog extends AbstractFilteredCatalog {
     }
 
     /**
+     * @return the layerGroupPolicy
+     */
+    public LayerGroupVisibilityPolicy getLayerGroupVisibilityPolicy() {
+        return layerGroupPolicy;
+    }
+
+    /**
      * Hide Layer if Request is GetCapabilities and Layer or its Resource are not advertised.
      * 
      * @param layer
