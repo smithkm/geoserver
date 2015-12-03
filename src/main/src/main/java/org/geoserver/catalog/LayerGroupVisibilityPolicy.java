@@ -6,7 +6,10 @@
 package org.geoserver.catalog;
 
 import java.util.List;
+import java.util.logging.Logger;
 
+import org.geoserver.platform.util.GeoServerPropertyFactoryBean;
+import org.geotools.util.logging.Logging;
 
 /**
  * Defines LayerGroup visibility policy, used by AdvertisedCatalog.
@@ -52,4 +55,37 @@ public interface LayerGroupVisibilityPolicy {
             return filteredLayers.size() == 0 && group.getLayers().size() > 0;
         }       
     };
+    
+    /**
+     * Factory Bean providing one of the visibility properties depending on the value of the 
+     * property GEOSERVER_LAYERGROUP_VISIBILITY
+     * 
+     * @author Kevin Smith, Boundless
+     *
+     */
+    public static class Factory extends GeoServerPropertyFactoryBean<LayerGroupVisibilityPolicy> {
+        private static final Logger LOGGER = Logging.getLogger(Factory.class);
+        public Factory() {
+            super("GEOSERVER_LAYERGROUP_VISIBILITY");
+        }
+        
+        @Override
+        public Class<?> getObjectType() {
+            return LayerGroupVisibilityPolicy.class;
+        }
+        
+        @Override
+        protected LayerGroupVisibilityPolicy createInstance(final String policyName) {
+            if(policyName.equals("HIDE_NEVER")) {
+                return HIDE_NEVER;
+            } else if(policyName.equals("HIDE_EMPTY")) {
+                return HIDE_EMPTY;
+            } else if(policyName.equals("HIDE_IF_ALL_HIDDEN")) {
+                return HIDE_IF_ALL_HIDDEN;
+            } else {
+                return null;
+            }
+        }
+        
+    }
 }

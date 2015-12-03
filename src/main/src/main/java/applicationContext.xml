@@ -63,8 +63,9 @@
     <bean id="advertisedCatalog" class="org.geoserver.catalog.impl.AdvertisedCatalog">
         <constructor-arg ref="secureCatalog" />
         <property name="layerGroupVisibilityPolicy">
-        	<bean id="org.geoserver.catalog.LayerGroupVisibilityPolicy.HIDE_NEVER" 
-        		class="org.springframework.beans.factory.config.FieldRetrievingFactoryBean"/>
+            <bean class="org.geoserver.catalog.LayerGroupVisibilityPolicy.Factory">
+                <property name="defaultValue" value="HIDE_NEVER"/>
+            </bean>
         </property>
     </bean>    
     <bean id="localWorkspaceCatalog" class="org.geoserver.catalog.impl.LocalWorkspaceCatalog">
