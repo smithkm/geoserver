@@ -69,6 +69,7 @@
           <descriptor>release/ext-gdal-wps.xml</descriptor>
           <descriptor>release/ext-wps-jdbc.xml</descriptor>
           <descriptor>release/ext-vectortiles.xml</descriptor>
+          <descriptor>release/ext-changelog.xml</descriptor>
         </descriptors>
       </configuration>
      </plugin>
@@ -197,6 +198,7 @@
 	<module>jdbcstore</module>
 	<module>gdal</module>
 	<module>gwc-s3</module>
+        <module>changelog</module>
       </modules>
     </profile>
     <profile>
@@ -429,6 +431,12 @@
       <id>gwc-s3</id>
       <modules>
         <module>gwc-s3</module>
+      </modules>
+    </profile>
+    <profile>
+      <id>changelog</id>
+      <modules>
+        <module>changelog</module>
       </modules>
     </profile>
     <profile>
