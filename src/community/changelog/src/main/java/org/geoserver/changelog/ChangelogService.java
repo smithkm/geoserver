@@ -2,27 +2,14 @@ package org.geoserver.changelog;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.util.ArrayList;
+import java.sql.Timestamp;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.Date;
-import java.util.LinkedList;
 import java.util.List;
-import java.util.UUID;
-import java.util.function.BiConsumer;
-import java.util.function.Function;
-import java.util.function.Supplier;
-import java.util.stream.Collector;
-import java.util.stream.Collectors;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.commons.lang.StringUtils;
-import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.DataStoreInfo;
 import org.geoserver.catalog.FeatureTypeInfo;
 import org.geoserver.catalog.LayerGroupInfo;
@@ -33,23 +20,16 @@ import org.geoserver.catalog.util.CloseableIterator;
 import org.geoserver.config.GeoServer;
 import org.geoserver.config.GeoServerInitializer;
 import org.geotools.data.DataStore;
-import org.geotools.data.DefaultTransaction;
-import org.geotools.data.FeatureSource;
 import org.geotools.data.FeatureStore;
-import org.geotools.data.Transaction;
 import org.geotools.factory.CommonFactoryFinder;
 import org.geotools.factory.GeoTools;
 import org.geotools.feature.FeatureIterator;
 import org.geotools.feature.NameImpl;
-import org.geotools.feature.TypeBuilder;
 import org.geotools.feature.simple.SimpleFeatureTypeBuilder;
 import org.geotools.feature.type.FeatureTypeFactoryImpl;
 import org.geotools.jdbc.JDBCDataStore;
-import org.geotools.util.SimpleInternationalString;
 import org.opengis.feature.simple.SimpleFeature;
 import org.opengis.feature.simple.SimpleFeatureType;
-import org.opengis.feature.type.AttributeDescriptor;
-import org.opengis.feature.type.AttributeType;
 import org.opengis.feature.type.FeatureType;
 import org.opengis.feature.type.FeatureTypeFactory;
 import org.opengis.feature.type.GeometryDescriptor;
@@ -57,11 +37,9 @@ import org.opengis.feature.type.Name;
 import org.opengis.filter.Filter;
 import org.opengis.filter.FilterFactory2;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
-import org.opengis.util.InternationalString;
 
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
-import com.sun.jmx.snmp.Timestamp;
 import com.vividsolutions.jts.geom.Geometry;
 
 public class ChangelogService implements GeoServerInitializer {
@@ -92,14 +70,17 @@ public class ChangelogService implements GeoServerInitializer {
     }
     
     private void createLog(LayerInfo info, DataStore ds) throws IOException{
-        String id=info.getId();
+        String id=info.getId().replace(":", "-");
+        // TODO check if it exists
+        // Add to storage
         ResourceInfo ri = info.getResource();
         CoordinateReferenceSystem crs = ri.getCRS();
         
         SimpleFeatureTypeBuilder builder = new SimpleFeatureTypeBuilder(ftf);
         builder.setName(id);
-        builder.add("guid", UUID.class);
-        builder.add("time", Date.class);
+        builder.setCRS(crs);
+        builder.add("guid", String.class);
+        builder.add("time", Timestamp.class);
         
         GeometryDescriptor logGeom;
         if(ri instanceof FeatureTypeInfo) {
