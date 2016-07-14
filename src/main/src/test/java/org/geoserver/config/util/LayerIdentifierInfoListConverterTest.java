@@ -5,6 +5,7 @@
  */
 package org.geoserver.config.util;
 
+import static org.geoserver.test.JsonMatcher.*;
 import static org.junit.Assert.*;
 
 import java.util.ArrayList;
@@ -12,35 +13,9 @@ import java.util.List;
 
 import org.geoserver.catalog.LayerIdentifierInfo;
 import org.geoserver.catalog.impl.LayerIdentifier;
-import org.hamcrest.BaseMatcher;
-import org.hamcrest.Description;
-import org.hamcrest.Matcher;
-import org.json.simple.parser.JSONParser;
-import org.json.simple.parser.ParseException;
 import org.junit.Test;
 
 public class LayerIdentifierInfoListConverterTest {
-
-    Matcher<String> jsonEquals(final String json) {
-        return new BaseMatcher<String>() {
-            
-            @Override
-            public boolean matches(Object item) {
-                JSONParser parser = new JSONParser();
-                try {
-                    return parser.parse((String)item).equals(parser.parse(json));
-                } catch (ParseException e) {
-                    return false;
-                }
-            }
-            
-            @Override
-            public void describeTo(Description description) {
-                description.appendText("json equivalent to ").appendValue(json);
-            }
-            
-        };
-    }
 
     @Test 
     public void testFromString() {
