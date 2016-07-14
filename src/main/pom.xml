@@ -42,11 +42,6 @@
    <scope>provided</scope>
   </dependency>
   <dependency>
-   <groupId>net.sf.json-lib</groupId>
-   <artifactId>json-lib</artifactId>
-   <classifier>jdk15</classifier>
-  </dependency>
-  <dependency>
    <groupId>commons-beanutils</groupId>
    <artifactId>commons-beanutils</artifactId>
   </dependency>
