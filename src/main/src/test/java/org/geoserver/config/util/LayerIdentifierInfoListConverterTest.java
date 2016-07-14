@@ -12,9 +12,35 @@ import java.util.List;
 
 import org.geoserver.catalog.LayerIdentifierInfo;
 import org.geoserver.catalog.impl.LayerIdentifier;
+import org.hamcrest.BaseMatcher;
+import org.hamcrest.Description;
+import org.hamcrest.Matcher;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
 import org.junit.Test;
 
 public class LayerIdentifierInfoListConverterTest {
+
+    Matcher<String> jsonEquals(final String json) {
+        return new BaseMatcher<String>() {
+            
+            @Override
+            public boolean matches(Object item) {
+                JSONParser parser = new JSONParser();
+                try {
+                    return parser.parse((String)item).equals(parser.parse(json));
+                } catch (ParseException e) {
+                    return false;
+                }
+            }
+            
+            @Override
+            public void describeTo(Description description) {
+                description.appendText("json equivalent to ").appendValue(json);
+            }
+            
+        };
+    }
 
     @Test 
     public void testFromString() {
@@ -66,7 +92,8 @@ public class LayerIdentifierInfoListConverterTest {
         String actual = LayerIdentifierInfoListConverter.toString(list);
         System.out.println(actual);
         String expected = "[{\"authority\":\"auth1\",\"identifier\":\"IDENTIFIER_1\"},{\"authority\":\"auth2\",\"identifier\":\"IDENTIFIER_2\"}]";
-        assertEquals(expected, actual);
+        
+        assertThat(actual, jsonEquals(expected));
     }
 
     @Test
@@ -82,7 +109,7 @@ public class LayerIdentifierInfoListConverterTest {
 
         String actual = LayerIdentifierInfoListConverter.toString(list);
         String expected = "[{\"authority\":\"auth1\",\"identifier\":\"IDENTIFIER_1\"}]";
-        assertEquals(expected, actual);
+        assertThat(actual, jsonEquals(expected));
     }
 
     @Test

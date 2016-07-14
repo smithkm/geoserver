@@ -5,13 +5,13 @@
  */
 package org.geoserver.config.util;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
-import net.sf.json.JSONArray;
-import net.sf.json.JSONException;
-import net.sf.json.JSONObject;
-
+import org.json.simple.JSONArray;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
+import org.json.simple.JSONObject;
 import org.geoserver.catalog.LayerIdentifierInfo;
 import org.geoserver.catalog.MetadataMap;
 import org.geoserver.catalog.impl.LayerIdentifier;
@@ -37,23 +37,23 @@ public class LayerIdentifierInfoListConverter {
      * @throws IllegalArgumentException
      *             if {@code str} can't be parsed to a JSONArray
      */
+    @SuppressWarnings("unchecked")
     public static List<LayerIdentifierInfo> fromString(String str) throws IllegalArgumentException {
-
+        JSONParser parser = new JSONParser();
         try {
-            final JSONArray array;
-            array = JSONArray.fromObject(str);
-            final int size = array.size();
-            List<LayerIdentifierInfo> list = new ArrayList<LayerIdentifierInfo>(size);
-            JSONObject jsonAuth;
-            for (int i = 0; i < size; i++) {
-                jsonAuth = array.getJSONObject(i);
-                LayerIdentifier id = new LayerIdentifier();
-                id.setAuthority(jsonAuth.getString(AUTHORITY));
-                id.setIdentifier(jsonAuth.getString(IDENTIFIER));
-                list.add(id);
+            final Object array;
+            array = parser.parse(str);
+            if(! (array instanceof JSONArray)) {
+                throw new IllegalArgumentException("Expected an array");
             }
-            return list;
-        } catch (JSONException e) {
+            return ((List<JSONObject>)array).stream()
+                    .map(jsonAuth->{
+                        final LayerIdentifier id = new LayerIdentifier();
+                        id.setAuthority((String)jsonAuth.get(AUTHORITY));
+                        id.setIdentifier((String)jsonAuth.get(IDENTIFIER));
+                        return id;
+                    }).collect(Collectors.toList());
+        } catch (ParseException e) {
             throw new IllegalArgumentException(e.getMessage(), e);
         }
     }
