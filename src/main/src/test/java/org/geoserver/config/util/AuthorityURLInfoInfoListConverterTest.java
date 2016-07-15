@@ -5,6 +5,7 @@
  */
 package org.geoserver.config.util;
 
+import static org.geoserver.test.JsonMatcher.jsonEquals;
 import static org.junit.Assert.*;
 
 import java.util.ArrayList;
@@ -14,6 +15,7 @@ import junit.framework.TestCase;
 
 import org.geoserver.catalog.AuthorityURLInfo;
 import org.geoserver.catalog.impl.AuthorityURL;
+import org.geoserver.test.JsonMatcher;
 import org.junit.Test;
 
 public class AuthorityURLInfoInfoListConverterTest {
@@ -67,7 +69,7 @@ public class AuthorityURLInfoInfoListConverterTest {
 
         String actual = AuthorityURLInfoInfoListConverter.toString(list);
         String expected = "[{\"name\":\"auth1\",\"href\":\"http://geoserver.org/auth1?\"},{\"name\":\"auth2\",\"href\":\"http://geoserver.org/auth2;someparam=somevalue&\"}]";
-        assertEquals(expected, actual);
+        assertThat(actual, jsonEquals(expected));
     }
 
     @Test
@@ -83,7 +85,7 @@ public class AuthorityURLInfoInfoListConverterTest {
 
         String actual = AuthorityURLInfoInfoListConverter.toString(list);
         String expected = "[{\"name\":\"auth1\",\"href\":\"http://geoserver.org/auth1?\"}]";
-        assertEquals(expected, actual);
+        assertThat(actual, jsonEquals(expected));
     }
 
     @Test
