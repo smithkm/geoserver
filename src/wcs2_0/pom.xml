@@ -69,6 +69,13 @@ application directory.
             <artifactId>xmlunit</artifactId>
             <scope>test</scope>
         </dependency>
+	<dependency>
+	  <groupId>net.sf.json-lib</groupId>
+	  <artifactId>json-lib</artifactId>
+	  <classifier>jdk15</classifier>
+	  <scope>test</scope>
+	</dependency>
+	
     </dependencies>
 
     <build>

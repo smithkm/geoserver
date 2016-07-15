@@ -75,5 +75,11 @@
       <artifactId>hamcrest-library</artifactId>
       <scope>test</scope>
     </dependency>
-   </dependencies>
+    <dependency>
+      <groupId>net.sf.json-lib</groupId>
+      <artifactId>json-lib</artifactId>
+      <classifier>jdk15</classifier>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
 </project>
