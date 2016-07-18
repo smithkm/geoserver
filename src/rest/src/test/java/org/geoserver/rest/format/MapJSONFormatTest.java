@@ -1,84 +1,75 @@
 package org.geoserver.rest.format;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertThat;
+import static org.geoserver.test.JsonMatcher.jsonEquals;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import net.sf.json.JSONArray;
-import net.sf.json.JSONNull;
-import net.sf.json.JSONObject;
-
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 public class MapJSONFormatTest {
 
     private MapJSONFormat mapJSONFormat;
-
+    
+    public @Rule TemporaryFolder temp = new TemporaryFolder();
+    
     @Before
     public void setUp() {
         mapJSONFormat = new MapJSONFormat();
     }
-
+    
+    String toJson(Object obj) throws Exception {
+        File f = temp.newFile();
+        try (FileOutputStream of = new FileOutputStream(f)) {
+            mapJSONFormat.write(obj, of);
+        }
+        byte[] encoded = Files.readAllBytes(f.toPath());
+        return new String(encoded, Charset.defaultCharset()); // MapJSONFormat doesn't currently support specifying encoding so use default
+    }
+    
     @Test
-    public void testBooleanResultTrue() {
-        Object jsonObject = mapJSONFormat.toJSONObject(true);
-        assertTrue(jsonObject instanceof Boolean);
-        Boolean b = (Boolean) jsonObject;
-        assertTrue(b);
+    public void testBooleanResultTrue() throws Exception {
+        assertThat(toJson(true), jsonEquals("true"));
     }
 
     @Test
-    public void testBooleanResultFalse() {
-        Object jsonObject = mapJSONFormat.toJSONObject(false);
-        assertTrue(jsonObject instanceof Boolean);
-        Boolean b = (Boolean) jsonObject;
-        assertFalse(b);
+    public void testBooleanResultFalse() throws Exception {
+        assertThat(toJson(false), jsonEquals("false"));
     }
 
     @Test
-    public void testNullResult() {
-        Object jsonObject = mapJSONFormat.toJSONObject(null);
-        assertTrue(jsonObject instanceof JSONNull);
+    public void testNullResult() throws Exception {
+        assertThat(toJson(null), jsonEquals("null"));
     }
 
     @Test
-    public void testArray() {
-        Object jsonObject = mapJSONFormat.toJSONObject(Arrays.asList(1, 2, 3));
-        assertTrue(jsonObject instanceof JSONArray);
-        JSONArray jsonArray = (JSONArray) jsonObject;
-        assertEquals(1, jsonArray.getInt(0));
-        assertEquals(2, jsonArray.getInt(1));
-        assertEquals(3, jsonArray.getInt(2));
+    public void testArray() throws Exception {
+        assertThat(toJson(Arrays.asList(1, 2, 3)), jsonEquals("[1,2,3]"));
     }
 
     @Test
-    public void testMap() {
-        Object jsonObject = mapJSONFormat.toJSONObject(Collections.singletonMap("foo", "bar"));
-        assertTrue(jsonObject instanceof JSONObject);
-        JSONObject json = (JSONObject) jsonObject;
-        assertEquals("bar", json.get("foo"));
+    public void testMap() throws Exception {
+        assertThat(toJson(Collections.singletonMap("foo", "bar")), jsonEquals("{\"foo\":\"bar\"}"));
     }
 
     @Test
-    public void testMapWithNullValue() {
-        Object jsonObject = mapJSONFormat.toJSONObject(Collections.singletonMap("foo", null));
-        assertTrue(jsonObject instanceof JSONObject);
-        JSONObject json = (JSONObject) jsonObject;
-        Object jsonNullObj = json.get("foo");
-        assertTrue(jsonNullObj instanceof JSONObject);
-        JSONObject jsonNull = (JSONObject) jsonNullObj;
-        assertTrue(jsonNull.isNullObject());
+    public void testMapWithNullValue() throws Exception {
+        assertThat(toJson(Collections.singletonMap("foo", null)), jsonEquals("{\"foo\":null}"));
     }
 
     @Test
-    public void testNested() {
+    public void testNested() throws Exception {
         Map<String, Object> input = new HashMap<String, Object>();
 
         List<Object> list = Arrays.<Object> asList("quux", true, 7, null);
@@ -89,23 +80,6 @@ public class MapJSONFormatTest {
 
         input.put("map", map);
 
-        Object jsonObject = mapJSONFormat.toJSONObject(input);
-        assertTrue(jsonObject instanceof JSONObject);
-        JSONObject json = (JSONObject) jsonObject;
-
-        Object nestedMapObj = json.get("map");
-        assertTrue(nestedMapObj instanceof JSONObject);
-        JSONObject nestedJson = (JSONObject) nestedMapObj;
-
-        assertEquals("morx", nestedJson.getString("fleem"));
-        Object listObj = nestedJson.get("list");
-        assertTrue(listObj instanceof JSONArray);
-        JSONArray arrayList = (JSONArray) listObj;
-        assertEquals("quux", arrayList.getString(0));
-        assertTrue(arrayList.getBoolean(1));
-        assertEquals(7, arrayList.getInt(2));
-        Object nullObj = arrayList.get(3);
-        JSONObject jsonNull = (JSONObject) nullObj;
-        assertTrue(jsonNull.isNullObject());
+        assertThat(toJson(input), jsonEquals("{\"map\":{\"fleem\":\"morx\", \"list\":[\"quux\", true, 7, null]}}"));
     }
 }
