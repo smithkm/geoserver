@@ -14,14 +14,16 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.stream.Collectors;
 
-import net.sf.json.JSON;
-import net.sf.json.JSONArray;
-import net.sf.json.JSONNull;
-import net.sf.json.JSONObject;
-
+import org.json.simple.JSONArray;
+import org.json.simple.JSONStreamAware;
+import org.json.simple.JSONValue;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
 import org.restlet.data.MediaType;
 import org.restlet.data.Request;
 import org.restlet.data.Response;
@@ -51,41 +53,34 @@ public class MapJSONFormat extends StreamDataFormat {
 
         //JD: why does this initial flush occur?
         outWriter.flush();
-
-        JSON obj = (JSON)toJSONObject(object);
-
-        obj.write(outWriter);
+        
+        Object obj = toJSONObject(object);
+        if(obj instanceof JSONStreamAware) {
+            ((JSONStreamAware) obj).writeJSONString(outWriter);
+        } else {
+            JSONValue.writeJSONString(obj, outWriter);
+        }
         outWriter.flush();
     }
     
     public Object toJSONObject(Object obj) {
         if (obj instanceof Map) {
-            Map m = (Map) obj;
-            JSONObject json = new JSONObject();
-            Iterator it = m.entrySet().iterator();
-
-            while (it.hasNext()) {
-                Map.Entry entry = (Map.Entry) it.next();
-                json.put((String) entry.getKey(), toJSONObject(entry.getValue()));
-            }
-
+            final Map<String,?> m = (Map<String,?>) obj;
+            final JSONObject json = new JSONObject();
+            m.entrySet().stream()
+                    .forEach(e->json.put(e.getKey(), toJSONObject(e.getValue())));
             return json;
         } else if (obj instanceof Collection) {
-            Collection col = (Collection) obj;
-            JSONArray json = new JSONArray();
-            Iterator it = col.iterator();
-
-            while (it.hasNext()) {
-                json.add(toJSONObject(it.next()));
-            }
-
-            return json;
+            Collection<?> col = (Collection<?>) obj;
+            return col.stream()
+                    .map(e->toJSONObject(e))
+                    .collect(Collectors.toCollection(JSONArray::new));
         } else if (obj instanceof Number) {
             return obj;
         } else if (obj instanceof Boolean) {
             return obj;
         } else if (obj == null) {
-            return JSONNull.getInstance();
+            return null;
         } else {
             return obj.toString();
         }
@@ -99,12 +94,12 @@ public class MapJSONFormat extends StreamDataFormat {
     @Override
     protected Object read(InputStream in) throws IOException {
         //TODO: character set
+        JSONParser parser = new JSONParser();
         BufferedReader reader = new BufferedReader( new InputStreamReader( in ) );
-        StringBuilder text = new StringBuilder();
-        String line = null;
-        while( ( line = reader.readLine() ) != null ) {
-            text.append( line );
+        try {
+            return parser.parse(reader);
+        } catch (ParseException e) {
+            throw new IOException("Error reading JSON");
         }
-        return JSONObject.fromObject(text.toString());
     }
 }
