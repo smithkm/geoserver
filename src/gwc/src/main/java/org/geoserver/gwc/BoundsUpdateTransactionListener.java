@@ -1,20 +1,32 @@
 package org.geoserver.gwc;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
+import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.apache.commons.jxpath.ri.QName;
 import org.eclipse.emf.ecore.EObject;
 import org.geoserver.catalog.Catalog;
+import org.geoserver.catalog.FeatureTypeInfo;
 import org.geoserver.wfs.TransactionEvent;
 import org.geoserver.wfs.TransactionEventType;
 import org.geoserver.wfs.TransactionPlugin;
 import org.geoserver.wfs.WFSException;
+import org.geotools.data.simple.SimpleFeatureCollection;
+import org.geotools.feature.NameImpl;
+import org.geotools.geometry.jts.ReferencedEnvelope;
+import org.geotools.geometry.jts.ReferencedEnvelope3D;
+import org.geotools.referencing.CRS;
 import org.geotools.util.logging.Logging;
+import org.opengis.feature.type.Name;
+import org.opengis.referencing.FactoryException;
+import org.opengis.referencing.crs.CoordinateReferenceSystem;
+import org.opengis.referencing.operation.TransformException;
 
-import net.opengis.wfs.DeleteElementType;
 import net.opengis.wfs.InsertElementType;
 import net.opengis.wfs.TransactionResponseType;
 import net.opengis.wfs.TransactionType;
@@ -23,15 +35,21 @@ import net.opengis.wfs.UpdateElementType;
 public class BoundsUpdateTransactionListener implements TransactionPlugin {
     private static Logger log = Logging.getLogger(BoundsUpdateTransactionListener.class);
     
+    static final String TRANSACTION_INFO_PLACEHOLDER = "BOUNDS_UPDATE_TRANSACTION_INFO_PLACEHOLDER";
+
     Catalog catalog;
     
+    public BoundsUpdateTransactionListener(Catalog catalog) {
+        super();
+        this.catalog = catalog;
+    }
+
     @Override
     public void dataStoreChange(TransactionEvent event) throws WFSException {
         log.info("DataStoreChange: " + event.getLayerName() + " " + event.getType());
         try {
             dataStoreChangeInternal(event);
         } catch (RuntimeException e) {
-            // Do never make the transaction fail due to a GWC error. Yell on the logs though
             log.log(Level.WARNING, "Error pre computing the transaction's affected area", e);
         }
     }
@@ -57,7 +75,6 @@ public class BoundsUpdateTransactionListener implements TransactionPlugin {
         try {
             afterTransactionInternal(request, committed);
         } catch (RuntimeException e) {
-            // Do never make the transaction fail due to a GWC error. Yell on the logs though
             log.log(Level.WARNING, "Error trying to update bounds to include affected area", e);
         }
     
@@ -70,63 +87,102 @@ public class BoundsUpdateTransactionListener implements TransactionPlugin {
     
     private void dataStoreChangeInternal(final TransactionEvent event) {
         final Object source = event.getSource();
-        if (!(source instanceof InsertElementType || source instanceof UpdateElementType || source instanceof DeleteElementType)) {
+        if (!(source instanceof InsertElementType || source instanceof UpdateElementType)) {
+            // We only care about operations that potentially the bounds.
             return;
         }
-
+        
         final EObject originatingTransactionRequest = (EObject) source;
         Objects.requireNonNull(originatingTransactionRequest, "No original transaction request exists");
         final TransactionEventType type = event.getType();
         if (TransactionEventType.POST_INSERT.equals(type)) {
-            // no need to compute the bounds, they're the same than for PRE_INSERT
+            // no need to compute the bounds, they're the same as for PRE_INSERT
             return;
         }
         
-        catalog.getFeatureType(null).setNativeBoundingBox(box);
-        catalog.getLayerGroup("").setBounds(bounds);
-        final javax.xml.namespace.QName featureTypeName = event.getLayerName();
-        final Set<String> affectedTileLayers = gwc.getTileLayersByFeatureType(
-                featureTypeName.getNamespaceURI(), featureTypeName.getLocalPart());
-        if (affectedTileLayers.isEmpty()) {
-            // event didn't touch a cached layer
+        final Name featureTypeName = new NameImpl(event.getLayerName());
+        final FeatureTypeInfo fti = catalog.getFeatureTypeByName(featureTypeName);
+        if(Objects.isNull(fti)) {
             return;
         }
-
+        
         final SimpleFeatureCollection affectedFeatures = event.getAffectedFeatures();
         final ReferencedEnvelope affectedBounds = affectedFeatures.getBounds();
-
+        
         final TransactionType transaction = event.getRequest();
-
-        for (String tileLayerName : affectedTileLayers) {
-            addLayerDirtyRegion(transaction, tileLayerName, affectedBounds);
-        }
+        
+        addDirtyRegion(transaction, featureTypeName, affectedBounds);
     }
-
+    
     @SuppressWarnings("unchecked")
-    private Map<String, List<ReferencedEnvelope>> getByLayerDirtyRegions(
+    private Map<Name, Collection<ReferencedEnvelope>> getByLayerDirtyRegions(
             final TransactionType transaction) {
-
+        
         final Map<Object, Object> extendedProperties = transaction.getExtendedProperties();
-        Map<String, List<ReferencedEnvelope>> byLayerDirtyRegions;
-        byLayerDirtyRegions = (Map<String, List<ReferencedEnvelope>>) extendedProperties
-                .get(GWC_TRANSACTION_INFO_PLACEHOLDER);
+        Map<Name, Collection<ReferencedEnvelope>> byLayerDirtyRegions;
+        byLayerDirtyRegions = (Map<Name, Collection<ReferencedEnvelope>>) extendedProperties
+                .get(TRANSACTION_INFO_PLACEHOLDER);
         if (byLayerDirtyRegions == null) {
-            byLayerDirtyRegions = new HashMap<String, List<ReferencedEnvelope>>();
-            extendedProperties.put(GWC_TRANSACTION_INFO_PLACEHOLDER, byLayerDirtyRegions);
+            byLayerDirtyRegions = new HashMap<Name, Collection<ReferencedEnvelope>>();
+            extendedProperties.put(TRANSACTION_INFO_PLACEHOLDER, byLayerDirtyRegions);
         }
         return byLayerDirtyRegions;
     }
-
-    private void addLayerDirtyRegion(final TransactionType transaction, final String tileLayerName,
+    
+    private void addDirtyRegion(final TransactionType transaction, final Name featureTypeName,
             final ReferencedEnvelope affectedBounds) {
-
-        Map<String, List<ReferencedEnvelope>> byLayerDirtyRegions = getByLayerDirtyRegions(transaction);
-
-        List<ReferencedEnvelope> layerDirtyRegion = byLayerDirtyRegions.get(tileLayerName);
+        
+        Map<Name, Collection<ReferencedEnvelope>> byLayerDirtyRegions = getByLayerDirtyRegions(transaction);
+        
+        Collection<ReferencedEnvelope> layerDirtyRegion = byLayerDirtyRegions.get(featureTypeName);
         if (layerDirtyRegion == null) {
             layerDirtyRegion = new ArrayList<ReferencedEnvelope>(2);
-            byLayerDirtyRegions.put(tileLayerName, layerDirtyRegion);
+            byLayerDirtyRegions.put(featureTypeName, layerDirtyRegion);
         }
         layerDirtyRegion.add(affectedBounds);
     }
+    
+    private void afterTransactionInternal(final TransactionType transaction, boolean committed) {
+        
+        final Map<Name, Collection<ReferencedEnvelope>> byLayerDirtyRegions = getByLayerDirtyRegions(transaction);
+        if (byLayerDirtyRegions.isEmpty()) {
+            return;
+        }
+        byLayerDirtyRegions.entrySet().stream().forEach(e->{
+            FeatureTypeInfo fti = catalog.getFeatureTypeByName(e.getKey());
+            try {
+                merge(fti, e.getValue()).ifPresent(dirtyRegion->{
+                    ReferencedEnvelope bounds = fti.getNativeBoundingBox();
+                    bounds.expandToInclude(dirtyRegion);
+                    fti.setNativeBoundingBox(bounds);
+                    catalog.save(fti);
+                });
+            } catch (Exception ex) {
+                log.log(Level.WARNING, ex.getMessage(), ex);
+                return;
+            }
+        });
+    }
+    
+    private Optional<ReferencedEnvelope> merge(final FeatureTypeInfo fti,
+            final Collection<ReferencedEnvelope> dirtyList) {
+        final CoordinateReferenceSystem declaredCrs = fti.getNativeBoundingBox().getCoordinateReferenceSystem();
+        return dirtyList.stream()
+            .map(env->{
+                if(env instanceof ReferencedEnvelope3D) {
+                    return new ReferencedEnvelope(env, CRS.getHorizontalCRS(env.getCoordinateReferenceSystem()));
+                } else  {
+                    return env;
+                }
+            })
+            .map(env->{
+                try {
+                    return env.transform(declaredCrs, true, 1000);
+                } catch (TransformException | FactoryException e) {
+                    throw new RuntimeException("Error while merging bounding boxes",e);
+                }
+            })
+            .reduce((env1, env2)->{new ReferencedEnvelope(env1).expandToInclude(env2); return env1;});
+    }
+    
 }
