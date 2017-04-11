@@ -182,7 +182,7 @@ public class BoundsUpdateTransactionListener implements TransactionPlugin {
                     throw new RuntimeException("Error while merging bounding boxes",e);
                 }
             })
-            .reduce((env1, env2)->{new ReferencedEnvelope(env1).expandToInclude(env2); return env1;});
+            .reduce((env1, env2)->{ReferencedEnvelope x = new ReferencedEnvelope(env1); x.expandToInclude(env2); return x;});
     }
     
 }
