@@ -36,6 +36,7 @@ import org.geowebcache.filter.parameters.StringParameterFilter;
 import org.geowebcache.util.ServletUtils;
 import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
+import org.junit.Assert;
 import org.junit.Test;
 import org.w3c.dom.Document;
 
@@ -118,11 +119,15 @@ public class RESTIntegrationTest extends GeoServerSystemTestSupport {
 
         MockHttpServletResponse response = putLayer(url, "badId", layerName);
 
-        assertEquals(HttpServletResponse.SC_BAD_REQUEST, response.getStatus());
-        // See GWCGeoServerRESTConfigurationProvider$RESTConverterHelper.unmarshal
-        String expected = "No GeoServer Layer or LayerGroup exists with id 'badId'";
-        assertEquals(expected, response.getContentAsString());
-        assertTrue(response.getContentType().startsWith("text/plain"));
+        assertThat(response, 
+                hasProperty("status", 
+                        equalTo(HttpServletResponse.SC_BAD_REQUEST)));
+        assertThat(response, 
+                hasProperty("contentAsString", 
+                        containsString("No GeoServer Layer or LayerGroup exists with id 'badId'")));
+        assertThat(response, 
+                hasProperty("contentType", 
+                        startsWith("text/plain")));
     }
 
     /**
@@ -135,10 +140,15 @@ public class RESTIntegrationTest extends GeoServerSystemTestSupport {
         final String url = "gwc/rest/layers/badLayerName.xml";
         MockHttpServletResponse response = putLayer(url, "", "badLayerName");
 
-        assertEquals(HttpServletResponse.SC_NOT_FOUND, response.getStatus());
-        // See GWCGeoServerRESTConfigurationProvider$RESTConverterHelper.unmarshal
-        String expected = "GeoServer Layer or LayerGroup 'badLayerName' not found";
-        assertEquals(expected, response.getContentAsString());
+        assertThat(response, 
+                hasProperty("status", 
+                        equalTo(HttpServletResponse.SC_NOT_FOUND)));
+        assertThat(response, 
+                hasProperty("contentAsString", 
+                        containsString("GeoServer Layer or LayerGroup 'badLayerName' not found")));
+        assertThat(response, 
+                hasProperty("contentType", 
+                        startsWith("text/plain")));
     }
 
     @Test
@@ -151,11 +161,17 @@ public class RESTIntegrationTest extends GeoServerSystemTestSupport {
 
         MockHttpServletResponse response = putLayer(url, id, "badLayerName");
 
-        assertEquals(HttpServletResponse.SC_BAD_REQUEST, response.getStatus());
-        // See GWCGeoServerRESTConfigurationProvider$RESTConverterHelper.unmarshal
         String expected = "Layer with id '" + id
                 + "' found but name does not match: 'badLayerName'/'" + layerName + "'";
-        assertEquals(expected, response.getContentAsString());
+        assertThat(response, 
+                hasProperty("status", 
+                        equalTo(HttpServletResponse.SC_BAD_REQUEST)));
+        assertThat(response, 
+                hasProperty("contentAsString", 
+                        containsString(expected)));
+        assertThat(response, 
+                hasProperty("contentType", 
+                        startsWith("text/plain")));
     }
 
     /**
@@ -171,10 +187,15 @@ public class RESTIntegrationTest extends GeoServerSystemTestSupport {
 
         MockHttpServletResponse response = putLayer(url, id, "");
 
-        assertEquals(HttpServletResponse.SC_BAD_REQUEST, response.getStatus());
-        // See GWCGeoServerRESTConfigurationProvider$RESTConverterHelper.unmarshal
-        String expected = "Layer name not provided";
-        assertEquals(expected, response.getContentAsString());
+        assertThat(response, 
+                hasProperty("status", 
+                        equalTo(HttpServletResponse.SC_BAD_REQUEST)));
+        assertThat(response, 
+                hasProperty("contentAsString", 
+                        containsString("Layer name not provided")));
+        assertThat(response, 
+                hasProperty("contentType", 
+                        startsWith("text/plain")));
     }
 
     @Test
