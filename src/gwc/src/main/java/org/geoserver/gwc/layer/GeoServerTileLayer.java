@@ -44,11 +44,10 @@ import org.geoserver.catalog.StyleInfo;
 import org.geoserver.catalog.WorkspaceInfo;
 import org.geoserver.gwc.GWC;
 import org.geoserver.gwc.config.GWCConfig;
+import org.geoserver.gwc.controller.DispatcherController;
 import org.geoserver.gwc.dispatch.GwcServiceDispatcherCallback;
 import org.geoserver.ows.LocalWorkspace;
-import org.geoserver.ows.Dispatcher;
 import org.geoserver.ows.URLMangler;
-import org.geoserver.ows.util.RequestUtils;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.wms.GetLegendGraphicRequest;
 import org.geoserver.wms.GetMapRequest;
@@ -61,7 +60,6 @@ import org.geotools.util.logging.Logging;
 import org.geowebcache.GeoWebCacheException;
 import org.geowebcache.config.ConfigurationException;
 import org.geowebcache.config.XMLGridSubset;
-import org.geowebcache.config.legends.LegendInfo;
 import org.geowebcache.config.legends.LegendInfoBuilder;
 import org.geowebcache.conveyor.ConveyorTile;
 import org.geowebcache.filter.parameters.ParameterException;
@@ -1233,7 +1231,7 @@ public class GeoServerTileLayer extends TileLayer implements ProxyLayer {
                 }
             }
         }
-        String baseUrl = RequestUtils.baseURL(Dispatcher.REQUEST.get().getHttpRequest());
+        String baseUrl = DispatcherController.BASE_URL.get();
         for(MetadataLinkInfo gsMetadata : gsMetadataLinks) {
             String url = ResponseUtils.proxifyMetadataLink(gsMetadata, baseUrl);
             try {
@@ -1289,7 +1287,7 @@ public class GeoServerTileLayer extends TileLayer implements ProxyLayer {
                         .withWidth(legendInfo.getWidth())
                         .withHeight(legendInfo.getHeight())
                         .withFormat(legendInfo.getFormat())
-                        .withCompleteUrl(buildURL(RequestUtils.baseURL(Dispatcher.REQUEST.get().getHttpRequest()),
+                        .withCompleteUrl(buildURL(DispatcherController.BASE_URL.get(),
                                 legendInfo.getOnlineResource(), null, URLMangler.URLType.RESOURCE));
                 legends.put(styleInfo.prefixedName(), gwcLegendInfo.build());
             } else {
@@ -1324,8 +1322,7 @@ public class GeoServerTileLayer extends TileLayer implements ProxyLayer {
                         .withWidth(finalWidth)
                         .withHeight(finalHeight)
                         .withFormat(finalFormat)
-                        .withCompleteUrl(buildURL(RequestUtils.baseURL(
-                                Dispatcher.REQUEST.get().getHttpRequest()), "ows", params, URLMangler.URLType.SERVICE));
+                        .withCompleteUrl(buildURL(DispatcherController.BASE_URL.get(), "ows", params, URLMangler.URLType.SERVICE));
                 legends.put(styleInfo.prefixedName(), gwcLegendInfo.build());
             }
         }

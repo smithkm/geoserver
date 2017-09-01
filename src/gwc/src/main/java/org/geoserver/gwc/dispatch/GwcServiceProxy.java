@@ -25,11 +25,13 @@ import org.geoserver.config.ServiceInfo;
 import org.geoserver.config.impl.ServiceInfoImpl;
 import org.geoserver.gwc.GWC;
 import org.geoserver.gwc.config.GWCServiceEnablementInterceptor;
+import org.geoserver.gwc.controller.DispatcherController;
 import org.geoserver.gwc.layer.GeoServerTileLayer;
 import org.geoserver.ows.DisabledServiceCheck;
 import org.geoserver.ows.Dispatcher;
 import org.geoserver.ows.Response;
 import org.geoserver.ows.util.KvpUtils;
+import org.geoserver.ows.util.ResponseUtils;
 import org.geoserver.platform.ServiceException;
 import org.geoserver.wfs.kvp.BBoxKvpParser;
 import org.geotools.geometry.jts.ReferencedEnvelope;
@@ -104,6 +106,8 @@ public class GwcServiceProxy {
      */
     public GwcOperationProxy dispatch(HttpServletRequest rawRequest, HttpServletResponse rawRespose)
             throws Exception {
+        
+        DispatcherController.BASE_URL.set(ResponseUtils.baseURL(rawRequest));
 
         ResponseWrapper responseWrapper = new ResponseWrapper(rawRespose);
 
