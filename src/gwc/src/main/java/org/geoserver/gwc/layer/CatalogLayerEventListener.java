@@ -585,13 +585,8 @@ public class CatalogLayerEventListener implements CatalogListener {
 
         final GeoServerTileLayer modifiedTileLayer;
 
-        if (oldTileLayer.getLayerInfo() != null) {
-            LayerInfo layerInfo = oldTileLayer.getLayerInfo();
-            modifiedTileLayer = new GeoServerTileLayer(layerInfo, gridSetBroker, tileLayerInfo);
-        } else {
-            LayerGroupInfo layerGroup = oldTileLayer.getLayerGroupInfo();
-            modifiedTileLayer = new GeoServerTileLayer(layerGroup, gridSetBroker, tileLayerInfo);
-        }
+        modifiedTileLayer = new GeoServerTileLayer(oldTileLayer.getPublishedInfo(), gridSetBroker, tileLayerInfo);
+        
         mediator.save(modifiedTileLayer);
     }
 

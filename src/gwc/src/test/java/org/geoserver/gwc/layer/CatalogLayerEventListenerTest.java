@@ -5,10 +5,12 @@
  */
 package org.geoserver.gwc.layer;
 
-import static junit.framework.Assert.assertEquals;
-import static junit.framework.Assert.assertNotNull;
-import static junit.framework.Assert.assertSame;
 import static org.geoserver.gwc.GWC.tileLayerName;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasProperty;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.sameInstance;
+import static org.junit.Assert.assertThat;
 import static org.mockito.Matchers.*;
 import static org.mockito.Mockito.*;
 
@@ -178,7 +180,7 @@ public class CatalogLayerEventListenerTest {
         GeoServerTileLayer tileLayer = mock(GeoServerTileLayer.class);
         when(mockMediator.hasTileLayer(same(mockResourceInfo))).thenReturn(true);
         when(tileLayer.getInfo()).thenReturn(info);
-        when(tileLayer.getLayerInfo()).thenReturn(mockLayerInfo);
+        when(tileLayer.getPublishedInfo()).thenReturn(mockLayerInfo);
 
         when(mockMediator.getTileLayer(same(mockResourceInfo))).thenReturn(tileLayer);
         when(mockMediator.getTileLayerByName(eq(oldTileLayerName))).thenReturn(tileLayer);
@@ -196,11 +198,17 @@ public class CatalogLayerEventListenerTest {
         verify(mockMediator).save(captor.capture());
 
         GeoServerTileLayer saved = captor.getValue();
-        assertNotNull(saved);
-        assertNotNull(saved.getInfo());
-        GeoServerTileLayerInfo savedInfo = saved.getInfo();
-        assertSame(info, savedInfo);
-        assertEquals(renamedPrefixedResouceName, savedInfo.getName());
+        
+        assertThat(saved, notNullValue());
+        assertThat(saved, hasProperty("info", sameInstance(info)));
+        assertThat(saved, hasProperty("info", hasProperty("name", equalTo(renamedPrefixedResouceName))));
+        verifyDeprecatedInfoAccessorsNotUsed(tileLayer);
+    }
+
+    @SuppressWarnings("deprecation")
+    private void verifyDeprecatedInfoAccessorsNotUsed(GeoServerTileLayer tileLayer) {
+        verify(tileLayer, never()).getLayerInfo();
+        verify(tileLayer, never()).getLayerGroupInfo();
     }
 
     @Test
@@ -220,7 +228,7 @@ public class CatalogLayerEventListenerTest {
         GeoServerTileLayer tileLayer = mock(GeoServerTileLayer.class);
         when(mockMediator.hasTileLayer(same(mockResourceInfo))).thenReturn(true);
         when(tileLayer.getInfo()).thenReturn(info);
-        when(tileLayer.getLayerInfo()).thenReturn(mockLayerInfo);
+        when(tileLayer.getPublishedInfo()).thenReturn(mockLayerInfo);
 
         when(mockMediator.getTileLayer(same(mockResourceInfo))).thenReturn(tileLayer);
         String resourceName = mockResourceInfo.prefixedName();
@@ -236,6 +244,7 @@ public class CatalogLayerEventListenerTest {
         listener.handlePostModifyEvent(postModifyEvent);
 
         verify(mockMediator).truncate(eq(resourceName));
+        verifyDeprecatedInfoAccessorsNotUsed(tileLayer);
     }
 
     @Test public void testLayerGroupInfoRenamed() throws Exception {
@@ -252,7 +261,7 @@ public class CatalogLayerEventListenerTest {
                 GWCConfig.getOldDefaults());
         GeoServerTileLayer tileLayer = mock(GeoServerTileLayer.class);
         when(tileLayer.getInfo()).thenReturn(info);
-        when(tileLayer.getLayerGroupInfo()).thenReturn(mockLayerGroupInfo);
+        when(tileLayer.getPublishedInfo()).thenReturn(mockLayerInfo);
 
         when(mockMediator.hasTileLayer(same(mockLayerGroupInfo))).thenReturn(true);
         when(mockMediator.getTileLayer(same(mockLayerGroupInfo))).thenReturn(tileLayer);
@@ -276,11 +285,11 @@ public class CatalogLayerEventListenerTest {
         verify(mockMediator).save(captor.capture());
 
         GeoServerTileLayer saved = captor.getValue();
-        assertNotNull(saved);
-        assertNotNull(saved.getInfo());
-        GeoServerTileLayerInfo savedInfo = saved.getInfo();
-        assertSame(info, savedInfo);
-        assertEquals(renamedGroupName, savedInfo.getName());
+        
+        assertThat(saved, notNullValue());
+        assertThat(saved, hasProperty("info", sameInstance(info)));
+        assertThat(saved, hasProperty("info", hasProperty("name", equalTo(renamedGroupName))));
+        verifyDeprecatedInfoAccessorsNotUsed(tileLayer);
     }
 
     @Test public void testLayerGroupInfoRenamedDueToWorkspaceChanged() throws Exception {
@@ -299,7 +308,7 @@ public class CatalogLayerEventListenerTest {
 
         GeoServerTileLayer tileLayer = mock(GeoServerTileLayer.class);
         when(tileLayer.getInfo()).thenReturn(info);
-        when(tileLayer.getLayerGroupInfo()).thenReturn(mockLayerGroupInfo);
+        when(tileLayer.getPublishedInfo()).thenReturn(mockLayerInfo);
 
         when(mockMediator.hasTileLayer(same(mockLayerGroupInfo))).thenReturn(true);
         when(mockMediator.getTileLayer(same(mockLayerGroupInfo))).thenReturn(tileLayer);
@@ -325,14 +334,13 @@ public class CatalogLayerEventListenerTest {
                 .forClass(GeoServerTileLayer.class);
         verify(mockMediator).save(captor.capture());
 
-        GeoServerTileLayer saved = captor.getValue();
-        assertNotNull(saved);
-        assertNotNull(saved.getInfo());
-        GeoServerTileLayerInfo savedInfo = saved.getInfo();
-        assertSame(info, savedInfo);
         String tileLayerName = tileLayerName(mockLayerGroupInfo);
-        String actual = savedInfo.getName();
-        assertEquals(tileLayerName, actual);
+        GeoServerTileLayer saved = captor.getValue();
+        assertThat(saved, notNullValue());
+        assertThat(saved, hasProperty("info", sameInstance(info)));
+        assertThat(saved, hasProperty("info", hasProperty("name", equalTo(tileLayerName))));
+        
+        verifyDeprecatedInfoAccessorsNotUsed(tileLayer);
     }
 
     @Test public void testResourceInfoNamespaceChanged() throws Exception {
@@ -356,7 +364,7 @@ public class CatalogLayerEventListenerTest {
                 GWCConfig.getOldDefaults());
         GeoServerTileLayer tileLayer = mock(GeoServerTileLayer.class);
         when(tileLayer.getInfo()).thenReturn(info);
-        when(tileLayer.getLayerInfo()).thenReturn(mockLayerInfo);
+        when(tileLayer.getPublishedInfo()).thenReturn(mockLayerInfo);
 
         when(mockMediator.hasTileLayer(same(mockResourceInfo))).thenReturn(true);
         when(mockMediator.getTileLayer(same(mockResourceInfo))).thenReturn(tileLayer);
@@ -374,11 +382,12 @@ public class CatalogLayerEventListenerTest {
         verify(mockMediator).save(captor.capture());
 
         GeoServerTileLayer saved = captor.getValue();
-        assertNotNull(saved);
-        assertNotNull(saved.getInfo());
-        GeoServerTileLayerInfo savedInfo = saved.getInfo();
-        assertSame(info, savedInfo);
-        assertEquals(newPrefixedName, savedInfo.getName());
+        
+        assertThat(saved, notNullValue());
+        assertThat(saved, hasProperty("info", sameInstance(info)));
+        assertThat(saved, hasProperty("info", hasProperty("name", equalTo(newPrefixedName))));
+        
+        verifyDeprecatedInfoAccessorsNotUsed(tileLayer);
     }
 
     @Test public void testLayerGroupInfoLayersChanged() throws Exception {
@@ -441,6 +450,8 @@ public class CatalogLayerEventListenerTest {
         listener.handlePostModifyEvent(postModifyEvent);
 
         verify(mockMediator).truncate(eq(LAYER_GROUP_NAME));
+        
+        verifyDeprecatedInfoAccessorsNotUsed(tileLayer);
     }
 
     @Test public void testLayerInfoDefaultStyleChanged() throws Exception {
@@ -491,7 +502,8 @@ public class CatalogLayerEventListenerTest {
         
         // verify the layer group was also truncated 
         verify(mockMediator).truncate(LAYER_GROUP_NAME);
-
+        
+        verifyDeprecatedInfoAccessorsNotUsed(tileLayer);
     }
 
     @Test public void testLayerInfoAlternateStylesChanged() throws Exception {
@@ -548,7 +560,7 @@ public class CatalogLayerEventListenerTest {
             @Override
             public boolean matches(Object item) {
                 GeoServerTileLayer tl = (GeoServerTileLayer) item;
-                LayerInfo li = tl.getLayerInfo();
+                LayerInfo li = (LayerInfo) tl.getPublishedInfo();
                 return li == mockLayerInfo;
             }
 
@@ -557,5 +569,7 @@ public class CatalogLayerEventListenerTest {
                 // TODO Auto-generated method stub
             }
         }));
+        
+        verifyDeprecatedInfoAccessorsNotUsed(tileLayer);
     }
 }
