@@ -14,13 +14,22 @@
   <artifactId>gs-backup-restore</artifactId>
   <packaging>pom</packaging>
   <name>GeoServer Config Backup And Restore</name>
+  <version>2.13.0-bse</version>
+
+  <distributionManagement>
+    <repository>
+      <id>boundless-server</id>
+      <name>repo.boundlessgeo.com-releases</name>
+      <url>https://repo.boundlessgeo.com/boundless-server</url>
+    </repository>
+  </distributionManagement>
 
   <dependencies>
 
 	<dependency>
       <groupId>org.geoserver</groupId>
       <artifactId>gs-main</artifactId>
-    </dependency>
+  </dependency>
 
 	<!-- Test Dependencies -->
 	<dependency>
@@ -59,7 +68,7 @@
 	<dependency>
 		<groupId>org.geoserver</groupId>
 		<artifactId>gs-platform</artifactId>
-		<version>${project.version}</version>
+		<version>2.13.0</version>
 		<classifier>tests</classifier>
 		<scope>test</scope>
 	</dependency>
