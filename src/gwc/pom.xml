@@ -18,6 +18,15 @@
   <artifactId>gs-gwc</artifactId>
   <packaging>jar</packaging>
   <name>GeoWebCache (GWC) Module</name>
+  <version>2.13.0-bse</version>
+
+  <distributionManagement>
+    <repository>
+      <id>boundless-server</id>
+      <name>Boundless Secure Repository</name>
+      <url>http://repo.boundlessgeo.com/artifactory/boundless-server</url>
+    </repository>
+  </distributionManagement>
 
   <dependencies>
     <dependency>
@@ -147,7 +156,7 @@
     <dependency>
       <groupId>org.geoserver</groupId>
       <artifactId>gs-rest</artifactId>
-      <version>${project.version}</version>
+      <version>${gs.version}</version>
     </dependency>
     <dependency>
       <groupId>org.geowebcache</groupId>
