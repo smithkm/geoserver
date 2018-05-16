@@ -351,7 +351,7 @@ public class CatalogLayerEventListener implements CatalogListener {
                 defaultStyleChanged = true;
                 log.info("Truncating default style for layer " + layerName
                         + ", as it changed from " + oldStyleName + " to " + defaultStyle);
-                mediator.truncateByLayerAndStyle(layerName, oldStyleName);
+                mediator.truncateByLayerDefaultStyle(layerName);
             }
         } else {
             StyleInfo styleInfo = li.getDefaultStyle();
@@ -363,6 +363,7 @@ public class CatalogLayerEventListener implements CatalogListener {
             for (StyleInfo s : li.getStyles()) {
                 styles.add(s.prefixedName());
             }
+            styles.add(defaultStyle);
             ImmutableSet<String> cachedStyles = tileLayerInfo.cachedStyles();
             if (!styles.equals(cachedStyles)) {
                 // truncate no longer existing cached styles
@@ -373,9 +374,7 @@ public class CatalogLayerEventListener implements CatalogListener {
                     mediator.truncateByLayerAndStyle(layerName, oldCachedStyle);
                 }
                 // reset STYLES parameter filter
-                final boolean createParamIfNotExists = true;
-                TileLayerInfoUtil.updateStringParameterFilter(tileLayerInfo, "STYLES",
-                        createParamIfNotExists, defaultStyle, styles);
+                TileLayerInfoUtil.checkAutomaticStyles(li,tileLayerInfo);
                 save = true;
             }
         }
