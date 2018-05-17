@@ -119,6 +119,7 @@ public class TransactionCallbackTester implements TransactionCallback {
     TransactionResponse result;
     boolean committed;
     boolean beforeCommitCalled;
+    boolean dataStoreChanged;
     TransactionRequest request;
     BiFunction<Catalog, TransactionRequest, TransactionRequest> beforeTransaction =
             TransactionCallbackTester::defaultTransformation;
@@ -153,6 +154,12 @@ public class TransactionCallbackTester implements TransactionCallback {
         this.result = null;
         this.committed = false;
         this.beforeCommitCalled = false;
+        this.dataStoreChanged = false;
         this.beforeTransaction = TransactionCallbackTester::defaultTransformation;
+    }
+
+    @Override
+    public void dataStoreChange(TransactionEvent event) throws WFSException {
+        this.dataStoreChanged = true;
     }
 }

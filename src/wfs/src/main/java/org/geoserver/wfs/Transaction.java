@@ -686,6 +686,7 @@ public class Transaction {
         public void dataStoreChange(TransactionEvent event)
             throws WFSException {
             dataStoreChange(transactionPlugins, event);
+            dataStoreChange(transactionPlugins2, event);
             dataStoreChange(transactionListeners, event);
         }
     }
