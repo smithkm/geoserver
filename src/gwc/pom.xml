@@ -18,7 +18,7 @@
   <artifactId>gs-gwc</artifactId>
   <packaging>jar</packaging>
   <name>GeoWebCache (GWC) Module</name>
-  <version>2.13.0-bse</version>
+  <version>2.13.0-BSE-00002</version>
 
   <distributionManagement>
     <repository>
